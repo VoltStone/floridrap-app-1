@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('../partials/header') %>
+<%- include('../partials/admin-nav') %>
+
+<main id="main" class="container">
+  <div class="confirmation-box">
+    <h1>Supprimer « <%= product.name %> » ?</h1>
+    <% if (orderCount > 0) { %>
+      <p>Ce produit fait partie de <%= orderCount %> commande<%= orderCount !== 1 ? 's' : '' %> existante<%= orderCount !== 1 ? 's' : '' %>. Il ne peut pas être supprimé — l'historique des commandes doit rester intact.</p>
+      <p>Vous pouvez à la place le marquer comme "en rupture de stock" pour qu'il disparaisse de la boutique.</p>
+      <a href="/admin/products/<%= product.id %>/edit" class="btn btn-lg" style="margin-top:16px;">Modifier le produit</a>
+    <% } else { %>
+      <p>Cette action est définitive et ne peut pas être annulée.</p>
+      <form action="/admin/products/<%= product.id %>/delete" method="post" style="margin-top:20px; display:inline-block;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit" class="btn btn-lg" style="background:#a3261e; border-color:#a3261e;">Confirmer la suppression</button>
+      </form>
+    <% } %>
+    <p style="margin-top:16px;"><a href="/admin/products">Annuler</a></p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

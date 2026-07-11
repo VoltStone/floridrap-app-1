@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('partials/header') %>
+
+<main id="main" class="container">
+  <p class="breadcrumb"><a href="/">Accueil</a> &nbsp;&gt;&nbsp; Mon panier</p>
+  <h1 style="font-size:22px; padding: 6px 0 20px;">Mon panier<% if (items.length) { %> (<%= items.length %> article<%= items.length !== 1 ? 's' : '' %>)<% } %></h1>
+
+  <% if (items.length === 0) { %>
+    <p class="empty-state">Votre panier est vide. <a href="/shop">Découvrir la boutique</a>.</p>
+  <% } else { %>
+    <div class="cart-layout">
+      <form action="/cart/update" method="post">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <table class="cart-table">
+          <thead>
+            <tr><th scope="col">Produit</th><th scope="col">Prix</th><th scope="col">Quantité</th><th scope="col">Sous-total</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+          </thead>
+          <tbody>
+            <% items.forEach(function(item, i) { %>
+              <tr>
+                <td>
+                  <div class="cart-item-info">
+                    <img src="<%= item.product.image_url %>" alt="">
+                    <div>
+                      <div class="name"><a href="/product/<%= item.product.slug %>"><%= item.product.name %></a></div>
+                      <div class="variant">Taille : <%= item.size %> · Couleur : <%= item.color %></div>
+                    </div>
+                  </div>
+                </td>
+                <td><%= item.product.price.toFixed(3) %> DT</td>
+                <td>
+                  <label for="qty-<%= i %>" class="visually-hidden">Quantité pour <%= item.product.name %></label>
+                  <input type="hidden" name="items[<%= i %>][lineId]" value="<%= item.lineId %>">
+                  <input type="number" class="cart-qty-input" id="qty-<%= i %>" name="items[<%= i %>][quantity]" value="<%= item.quantity %>" min="1" max="20">
+                </td>
+                <td><%= (item.lineTotalCents / 100).toFixed(3) %> DT</td>
+                <td></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <button type="submit" class="btn btn-outline" style="margin-top:16px;">Mettre à jour le panier</button>
+      </form>
+
+      <div>
+        <% items.forEach(function(item) { %>
+          <form action="/cart/remove" method="post" style="display:inline;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="lineId" value="<%= item.lineId %>">
+            <button type="submit" class="btn-danger-text" style="display:block; margin: 6px 0;">Retirer « <%= item.product.name %> »</button>
+          </form>
+        <% }); %>
+        <a href="/shop" class="continue-shopping">&larr; Continuer mes achats</a>
+      </div>
+    </div>
+
+    <div class="cart-layout" style="margin-top:0;">
+      <div></div>
+      <aside class="summary-box" aria-label="Résumé de la commande">
+        <h2>Résumé de la commande</h2>
+        <div class="summary-row"><span>Sous-total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
+        <div class="summary-row"><span>Livraison</span><span>Calculée à la commande</span></div>
+        <div class="summary-row total"><span>Total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
+        <a href="/checkout" class="btn btn-block btn-lg" style="margin-top:16px;">Passer la commande</a>
+      </aside>
+    </div>
+  <% } %>
+</main>
+
+<%- include('partials/footer') %>
+</body>
+</html>

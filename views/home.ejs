@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('partials/header') %>
+
+<main id="main" class="container">
+
+  <div class="promo-banner reveal">
+    <div>
+      <span class="eyebrow">Nouvelle collection</span>
+      <h1>Parures satin — jusqu'à &minus;20%</h1>
+      <p>Douceur et éclat pour votre chambre, livrées partout en Tunisie sous 2 à 4 jours.</p>
+      <a href="/shop?category=parures" class="btn">Découvrir</a>
+    </div>
+    <img src="https://images.pexels.com/photos/8583859/pexels-photo-8583859.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Chambre avec linge de lit blanc et lumineux">
+  </div>
+
+  <section class="section" aria-labelledby="cat-heading">
+    <div class="section-head"><h2 id="cat-heading">Acheter par catégorie</h2></div>
+    <ul class="cat-tiles">
+      <li class="reveal"><a href="/shop?category=draps" class="cat-tile">
+        <img src="https://images.pexels.com/photos/8793477/pexels-photo-8793477.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
+        <span>Draps de lit</span>
+      </a></li>
+      <li class="reveal"><a href="/shop?category=taies" class="cat-tile">
+        <img src="https://images.pexels.com/photos/6297081/pexels-photo-6297081.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
+        <span>Taies d'oreiller</span>
+      </a></li>
+      <li class="reveal"><a href="/shop?category=housses" class="cat-tile">
+        <img src="https://images.pexels.com/photos/16780153/pexels-photo-16780153.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
+        <span>Housses de couette</span>
+      </a></li>
+      <li class="reveal"><a href="/shop?category=parures" class="cat-tile">
+        <img src="https://images.pexels.com/photos/7591040/pexels-photo-7591040.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
+        <span>Parures de lit</span>
+      </a></li>
+      <li class="reveal"><a href="/shop?category=couvertures" class="cat-tile">
+        <img src="https://images.pexels.com/photos/20801059/pexels-photo-20801059.jpeg?auto=compress&cs=tinysrgb&w=400" alt="">
+        <span>Couvertures</span>
+      </a></li>
+    </ul>
+  </section>
+
+  <section class="section" aria-labelledby="featured-heading">
+    <div class="section-head">
+      <h2 id="featured-heading">Sélection du moment</h2>
+      <a href="/shop" class="view-all">Voir tout</a>
+    </div>
+    <ul class="product-grid">
+      <% featured.forEach(function(p) { %>
+        <li class="product-card reveal">
+          <a class="card-link" href="/product/<%= p.slug %>">
+            <div class="thumb"><img src="<%= p.image_url %>" alt=""></div>
+            <div class="product-info">
+              <div class="product-cat"><%= p.category %></div>
+              <div class="product-name"><%= p.name %></div>
+              <div class="price-row">
+                <span class="price"><%= p.price.toFixed(3) %> DT</span>
+                <% if (p.compareAtPrice) { %><span class="price-old"><%= p.compareAtPrice.toFixed(3) %> DT</span><% } %>
+              </div>
+            </div>
+          </a>
+        </li>
+      <% }); %>
+    </ul>
+  </section>
+
+  <section class="section" aria-labelledby="bestsellers-heading">
+    <div class="section-head">
+      <h2 id="bestsellers-heading">Meilleures ventes</h2>
+      <a href="/shop" class="view-all">Voir tout</a>
+    </div>
+    <ul class="product-grid">
+      <% bestSellers.forEach(function(p) { %>
+        <li class="product-card reveal">
+          <a class="card-link" href="/product/<%= p.slug %>">
+            <div class="thumb">
+              <span class="badge">Best-seller</span>
+              <img src="<%= p.image_url %>" alt="">
+            </div>
+            <div class="product-info">
+              <div class="product-cat"><%= p.category %></div>
+              <div class="product-name"><%= p.name %></div>
+              <div class="price-row"><span class="price"><%= p.price.toFixed(3) %> DT</span></div>
+            </div>
+          </a>
+        </li>
+      <% }); %>
+    </ul>
+  </section>
+
+  <section class="section" aria-labelledby="new-heading">
+    <div class="section-head">
+      <h2 id="new-heading">Nouveautés</h2>
+      <a href="/shop" class="view-all">Voir tout</a>
+    </div>
+    <ul class="product-grid">
+      <% newArrivals.forEach(function(p) { %>
+        <li class="product-card reveal">
+          <a class="card-link" href="/product/<%= p.slug %>">
+            <div class="thumb">
+              <span class="badge">Nouveau</span>
+              <img src="<%= p.image_url %>" alt="">
+            </div>
+            <div class="product-info">
+              <div class="product-cat"><%= p.category %></div>
+              <div class="product-name"><%= p.name %></div>
+              <div class="price-row"><span class="price"><%= p.price.toFixed(3) %> DT</span></div>
+            </div>
+          </a>
+        </li>
+      <% }); %>
+    </ul>
+  </section>
+
+</main>
+
+<div class="trust-strip">
+  <div class="container">
+    <ul>
+      <li class="trust-item reveal"><div class="icon" aria-hidden="true">&#128666;</div><div class="t">Paiement à la livraison</div><div class="s">Disponible partout</div></li>
+      <li class="trust-item reveal"><div class="icon" aria-hidden="true">&#8635;</div><div class="t">Retour sous 7 jours</div><div class="s">Simple et rapide</div></li>
+      <li class="trust-item reveal"><div class="icon" aria-hidden="true">&#9200;</div><div class="t">Livraison 2-4 jours</div><div class="s">Toutes les régions</div></li>
+      <li class="trust-item reveal"><div class="icon" aria-hidden="true">&#9742;</div><div class="t">Service client</div><div class="s">Lun-Sam, 9h-18h</div></li>
+    </ul>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('../partials/header') %>
+<%- include('../partials/admin-nav') %>
+
+<main id="main" class="container">
+  <div class="confirmation-box">
+    <h1>Annuler la commande <%= order.order_number %> ?</h1>
+    <p>Cette commande sera <strong>définitivement supprimée</strong> — cette action ne peut pas être annulée. Utilisez ceci uniquement lorsque le client a confirmé qu'il ne souhaite plus la commande.</p>
+    <p style="color:var(--color-7); font-size:14px;">Client : <%= order.full_name %> · Total : <%= (order.total_cents / 100).toFixed(3) %> DT</p>
+
+    <form action="/admin/orders/<%= order.id %>/cancel" method="post" style="margin-top:20px; display:inline-block;">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button type="submit" class="btn btn-lg" style="background:#a3261e;">Confirmer l'annulation et la suppression</button>
+    </form>
+    <p style="margin-top:16px;"><a href="/admin/orders/<%= order.id %>">Annuler, ne rien faire</a></p>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('../partials/header') %>
+<%- include('../partials/admin-nav') %>
+
+<main id="main" class="container">
+  <div class="section-head" style="padding-top:20px;">
+    <h1 style="font-size:22px;">Produits (<%= products.length %>)</h1>
+    <a href="/admin/products/new" class="btn">+ Ajouter un produit</a>
+  </div>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th scope="col"><span class="visually-hidden">Photo</span></th>
+        <th scope="col">Nom</th>
+        <th scope="col">Catégorie</th>
+        <th scope="col">Prix</th>
+        <th scope="col">Stock</th>
+        <th scope="col"><span class="visually-hidden">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% products.forEach(function(p) { %>
+        <tr>
+          <td><img src="<%= p.image_url %>" alt="" class="admin-thumb"></td>
+          <td>
+            <%= p.name %>
+            <% if (p.is_best_seller) { %><span class="mini-badge">Best-seller</span><% } %>
+            <% if (p.is_new) { %><span class="mini-badge">Nouveau</span><% } %>
+          </td>
+          <td><%= categoryLabels[p.category] %></td>
+          <td>
+            <%= p.price.toFixed(3) %> DT
+            <% if (p.compareAtPrice) { %><br><span class="price-old"><%= p.compareAtPrice.toFixed(3) %> DT</span><% } %>
+          </td>
+          <td><%= p.in_stock ? 'En stock' : 'Rupture' %></td>
+          <td class="admin-actions">
+            <a href="/admin/products/<%= p.id %>/edit">Modifier</a>
+            <a href="/admin/products/<%= p.id %>/delete" class="btn-danger-text">Supprimer</a>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

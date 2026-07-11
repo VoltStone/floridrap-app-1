@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('../partials/header') %>
+<%- include('../partials/admin-nav') %>
+
+<main id="main" class="container">
+  <h1 style="font-size:22px; padding: 20px 0 20px;">Tableau de bord</h1>
+
+  <ul class="admin-stats">
+    <li class="admin-stat-card reveal">
+      <span class="admin-stat-value"><%= stats.totalOrders %></span>
+      <span class="admin-stat-label">Commandes au total</span>
+    </li>
+    <li class="admin-stat-card reveal">
+      <span class="admin-stat-value"><%= stats.pendingOrders %></span>
+      <span class="admin-stat-label">Commandes en attente</span>
+    </li>
+    <li class="admin-stat-card reveal">
+      <span class="admin-stat-value"><%= stats.completedOrders %></span>
+      <span class="admin-stat-label">Commandes terminées</span>
+    </li>
+    <li class="admin-stat-card reveal">
+      <span class="admin-stat-value"><%= stats.totalProducts %></span>
+      <span class="admin-stat-label">Produits au catalogue</span>
+    </li>
+    <li class="admin-stat-card reveal">
+      <span class="admin-stat-value"><%= stats.outOfStock %></span>
+      <span class="admin-stat-label">Produits en rupture</span>
+    </li>
+  </ul>
+
+  <div class="section-head" style="margin-top:36px;">
+    <h2 style="font-size:18px;">Commandes récentes</h2>
+    <a href="/admin/orders" class="view-all">Voir toutes les commandes</a>
+  </div>
+
+  <% if (recentOrders.length === 0) { %>
+    <p class="empty-state">Aucune commande pour le moment.</p>
+  <% } else { %>
+    <table class="orders-table">
+      <thead>
+        <tr><th scope="col">Commande</th><th scope="col">Client</th><th scope="col">Date</th><th scope="col">Statut</th><th scope="col">Total</th></tr>
+      </thead>
+      <tbody>
+        <% recentOrders.forEach(function(o) { %>
+          <tr>
+            <td><a href="/admin/orders/<%= o.id %>"><%= o.order_number %></a></td>
+            <td><%= o.full_name %></td>
+            <td><%= o.created_at %></td>
+            <td><span class="status-pill status-<%= o.status %>"><%= o.status %></span></td>
+            <td><%= (o.total_cents / 100).toFixed(3) %> DT</td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

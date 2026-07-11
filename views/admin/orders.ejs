@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('../partials/header') %>
+<%- include('../partials/admin-nav') %>
+
+<main id="main" class="container">
+  <div class="section-head" style="padding-top:20px;">
+    <h1 style="font-size:22px;">Commandes en cours (<%= orders.length %>)</h1>
+    <a href="/admin/orders/finished" class="view-all">Voir les commandes terminées &rarr;</a>
+  </div>
+
+  <% if (orders.length === 0) { %>
+    <p class="empty-state">Aucune commande en cours pour le moment.</p>
+  <% } else { %>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th scope="col">Commande</th>
+          <th scope="col">Client</th>
+          <th scope="col">Gouvernorat</th>
+          <th scope="col">Date</th>
+          <th scope="col">Statut</th>
+          <th scope="col">Total</th>
+          <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% orders.forEach(function(o) { %>
+          <tr>
+            <td><a href="/admin/orders/<%= o.id %>"><%= o.order_number %></a></td>
+            <td><%= o.full_name %></td>
+            <td><%= o.governorate %></td>
+            <td><%= o.created_at %></td>
+            <td><span class="status-pill status-<%= o.status %>"><%= o.status %></span></td>
+            <td><%= (o.total_cents / 100).toFixed(3) %> DT</td>
+            <td>
+              <div class="admin-actions">
+                <form action="/admin/orders/<%= o.id %>/complete" method="post" style="margin:0;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="btn-danger-text" style="color:#204f2a;">Terminer</button>
+                </form>
+                <a href="/admin/orders/<%= o.id %>/cancel" class="btn-danger-text">Annuler</a>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

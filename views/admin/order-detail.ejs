@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('../partials/header') %>
+<%- include('../partials/admin-nav') %>
+
+<main id="main" class="container">
+  <p class="breadcrumb"><a href="/admin/orders">Commandes</a> &nbsp;&gt;&nbsp; <%= order.order_number %></p>
+  <h1 style="font-size:22px; padding: 6px 0 20px;">Commande <%= order.order_number %></h1>
+
+  <div class="admin-form-layout">
+    <div>
+      <h2 style="font-size:15px; margin-bottom:10px;">Articles</h2>
+      <ul class="order-summary-list">
+        <% items.forEach(function(item) { %>
+          <li>
+            <span><%= item.product_name %> × <%= item.quantity %><br><small style="color:var(--color-7);"><%= item.size %> · <%= item.color %></small></span>
+            <span><%= ((item.unit_price_cents * item.quantity) / 100).toFixed(3) %> DT</span>
+          </li>
+        <% }); %>
+      </ul>
+      <div class="summary-row total"><span>Total</span><span><%= (order.total_cents / 100).toFixed(3) %> DT</span></div>
+
+      <h2 style="font-size:15px; margin: 28px 0 10px;">Livraison</h2>
+      <p><%= order.full_name %><br>
+      <%= order.address %><br>
+      <%= order.city %>, <%= order.governorate %><br>
+      <%= order.phone %> · <%= order.email %></p>
+      <p class="hint">Paiement : à la livraison (espèces)</p>
+    </div>
+
+    <div>
+      <h2 style="font-size:15px; margin-bottom:10px;">Statut actuel</h2>
+      <p style="margin-bottom:18px;"><span class="status-pill status-<%= order.status %>"><%= order.status %></span></p>
+
+      <% if (order.status === 'completed') { %>
+        <p class="hint">Cette commande est terminée et archivée. Elle n'apparaît plus dans les commandes en cours.</p>
+      <% } else { %>
+        <form action="/admin/orders/<%= order.id %>/status" method="post" style="margin-bottom:22px;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="field <%= errors.status ? 'has-error' : '' %>">
+            <label for="status">Avancement</label>
+            <select id="status" name="status" <% if (errors.status) { %>aria-invalid="true" aria-describedby="status-error"<% } %>>
+              <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>pending</option>
+              <option value="confirmed" <%= order.status === 'confirmed' ? 'selected' : '' %>>confirmed</option>
+            </select>
+            <% if (errors.status) { %><p class="error-text" id="status-error"><%= errors.status[0] %></p><% } %>
+          </div>
+          <button type="submit" class="btn btn-outline">Mettre à jour</button>
+        </form>
+
+        <h2 style="font-size:15px; margin-bottom:10px;">Actions</h2>
+        <form action="/admin/orders/<%= order.id %>/complete" method="post" style="margin-bottom:12px;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="btn btn-block">Marquer comme terminée</button>
+        </form>
+        <a href="/admin/orders/<%= order.id %>/cancel" class="btn btn-outline btn-block" style="border-color:#a3261e; color:#a3261e;">Annuler la commande</a>
+      <% } %>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

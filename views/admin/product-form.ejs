@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('../partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('../partials/header') %>
+<%- include('../partials/admin-nav') %>
+
+<main id="main" class="container">
+  <p class="breadcrumb"><a href="/admin/products">Produits</a> &nbsp;&gt;&nbsp; <%= mode === 'create' ? 'Nouveau produit' : 'Modifier' %></p>
+  <h1 style="font-size:22px; padding: 6px 0 20px;"><%= mode === 'create' ? 'Nouveau produit' : `Modifier « ${product.name} »` %></h1>
+
+  <div class="admin-form-layout">
+    <form action="<%= mode === 'create' ? '/admin/products' : `/admin/products/${product.id}` %>" method="post" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="field <%= errors.name ? 'has-error' : '' %>">
+        <label for="name">Nom du produit</label>
+        <input type="text" id="name" name="name" value="<%= values.name || '' %>" required
+               <% if (errors.name) { %>aria-invalid="true" aria-describedby="name-error"<% } %>>
+        <% if (errors.name) { %><p class="error-text" id="name-error"><%= errors.name[0] %></p><% } %>
+      </div>
+
+      <div class="field <%= errors.category ? 'has-error' : '' %>">
+        <label for="category">Catégorie</label>
+        <select id="category" name="category" required <% if (errors.category) { %>aria-invalid="true" aria-describedby="category-error"<% } %>>
+          <option value="">Sélectionner...</option>
+          <% Object.keys(categoryLabels).forEach(function(key) { %>
+            <option value="<%= key %>" <%= values.category === key ? 'selected' : '' %>><%= categoryLabels[key] %></option>
+          <% }); %>
+        </select>
+        <% if (errors.category) { %><p class="error-text" id="category-error"><%= errors.category[0] %></p><% } %>
+      </div>
+
+      <div class="field <%= errors.description ? 'has-error' : '' %>">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="4" required
+                  <% if (errors.description) { %>aria-invalid="true" aria-describedby="description-error"<% } %>><%= values.description || '' %></textarea>
+        <% if (errors.description) { %><p class="error-text" id="description-error"><%= errors.description[0] %></p><% } %>
+      </div>
+
+      <div class="field-row">
+        <div class="field <%= errors.price ? 'has-error' : '' %>">
+          <label for="price">Prix (DT)</label>
+          <input type="text" id="price" name="price" value="<%= values.price || '' %>" inputmode="decimal" placeholder="ex. 89.000" required
+                 <% if (errors.price) { %>aria-invalid="true" aria-describedby="price-error"<% } %>>
+          <% if (errors.price) { %><p class="error-text" id="price-error"><%= errors.price[0] %></p><% } %>
+        </div>
+        <div class="field <%= errors.compareAtPrice ? 'has-error' : '' %>">
+          <label for="compareAtPrice">Prix barré (DT, optionnel — pour afficher une promotion)</label>
+          <input type="text" id="compareAtPrice" name="compareAtPrice" value="<%= values.compareAtPrice || '' %>" inputmode="decimal" placeholder="ex. 110.000"
+                 <% if (errors.compareAtPrice) { %>aria-invalid="true" aria-describedby="compareAtPrice-error"<% } %>>
+          <p class="hint">Doit être supérieur au prix actuel. Laisser vide pour aucune promotion.</p>
+          <% if (errors.compareAtPrice) { %><p class="error-text" id="compareAtPrice-error"><%= errors.compareAtPrice[0] %></p><% } %>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field <%= errors.material ? 'has-error' : '' %>">
+          <label for="material">Matière</label>
+          <input type="text" id="material" name="material" value="<%= values.material || '' %>" required
+                 <% if (errors.material) { %>aria-invalid="true" aria-describedby="material-error"<% } %>>
+          <% if (errors.material) { %><p class="error-text" id="material-error"><%= errors.material[0] %></p><% } %>
+        </div>
+        <div class="field <%= errors.care ? 'has-error' : '' %>">
+          <label for="care">Entretien</label>
+          <input type="text" id="care" name="care" value="<%= values.care || '' %>" required
+                 <% if (errors.care) { %>aria-invalid="true" aria-describedby="care-error"<% } %>>
+          <% if (errors.care) { %><p class="error-text" id="care-error"><%= errors.care[0] %></p><% } %>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field <%= errors.sizes ? 'has-error' : '' %>">
+          <label for="sizes">Tailles disponibles</label>
+          <input type="text" id="sizes" name="sizes" value="<%= values.sizes || '' %>" placeholder="140x190, 160x200, 180x200" required
+                 <% if (errors.sizes) { %>aria-invalid="true" aria-describedby="sizes-error"<% } %>>
+          <p class="hint">Séparées par des virgules.</p>
+          <% if (errors.sizes) { %><p class="error-text" id="sizes-error"><%= errors.sizes[0] %></p><% } %>
+        </div>
+        <div class="field <%= errors.colors ? 'has-error' : '' %>">
+          <label for="colors">Couleurs disponibles</label>
+          <input type="text" id="colors" name="colors" value="<%= values.colors || '' %>" placeholder="Blanc, Anthracite, Mauve" required
+                 <% if (errors.colors) { %>aria-invalid="true" aria-describedby="colors-error"<% } %>>
+          <p class="hint">Séparées par des virgules.</p>
+          <% if (errors.colors) { %><p class="error-text" id="colors-error"><%= errors.colors[0] %></p><% } %>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="checkbox-row">
+          <input type="checkbox" name="inStock" <%= values.inStock === 'on' ? 'checked' : '' %>> En stock
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" name="isBestSeller" <%= values.isBestSeller === 'on' ? 'checked' : '' %>> Afficher dans "Meilleures ventes"
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" name="isNew" <%= values.isNew === 'on' ? 'checked' : '' %>> Afficher dans "Nouveautés"
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-lg"><%= mode === 'create' ? 'Créer le produit' : 'Enregistrer les modifications' %></button>
+    </form>
+
+    <div>
+      <% if (mode === 'edit') { %>
+        <div class="admin-image-panel">
+          <h2 style="font-size:15px; margin-bottom:12px;">Photo actuelle</h2>
+          <img src="<%= product.image_url %>" alt="" class="admin-current-image">
+
+          <form action="/admin/products/<%= product.id %>/image" method="post" enctype="multipart/form-data" style="margin-top:16px;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="field">
+              <label for="image">Remplacer la photo</label>
+              <input type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp" required>
+              <p class="hint">JPEG, PNG ou WebP. 5 Mo maximum. L'image sera automatiquement redimensionnée.</p>
+            </div>
+            <button type="submit" class="btn btn-outline">Envoyer la photo</button>
+          </form>
+        </div>
+      <% } else { %>
+        <div class="admin-image-panel">
+          <p class="hint">Vous pourrez ajouter une photo une fois le produit créé.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</main>
+
+<%- include('../partials/footer') %>
+</body>
+</html>

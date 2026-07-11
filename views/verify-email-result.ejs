@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('partials/header') %>
+
+<main id="main" class="container">
+  <div class="confirmation-box">
+    <h1><%= success ? 'E-mail vérifié' : 'Lien invalide' %></h1>
+    <p><%= message %></p>
+    <% if (success) { %>
+      <a href="/login" class="btn btn-lg" style="margin-top: 24px;">Se connecter</a>
+    <% } else { %>
+      <a href="/resend-verification" class="btn btn-lg" style="margin-top: 24px;">Demander un nouveau lien</a>
+    <% } %>
+  </div>
+</main>
+
+<%- include('partials/footer') %>
+</body>
+</html>

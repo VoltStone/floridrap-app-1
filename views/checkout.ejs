@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('partials/header') %>
+
+<main id="main" class="container">
+  <p class="breadcrumb"><a href="/">Accueil</a> &nbsp;&gt;&nbsp; <a href="/cart">Panier</a> &nbsp;&gt;&nbsp; Commande</p>
+  <h1 style="font-size:22px; padding: 6px 0 20px;">Finaliser la commande</h1>
+
+  <div class="cart-layout">
+    <form action="/checkout" method="post" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <fieldset>
+        <legend>Coordonnées</legend>
+        <div class="field <%= errors.fullName ? 'has-error' : '' %>">
+          <label for="fullName">Nom complet</label>
+          <input type="text" id="fullName" name="fullName" value="<%= values.fullName || '' %>" required
+                 <% if (errors.fullName) { %>aria-invalid="true" aria-describedby="fullName-error"<% } %>>
+          <% if (errors.fullName) { %><p class="error-text" id="fullName-error"><%= errors.fullName[0] %></p><% } %>
+        </div>
+        <div class="field <%= errors.phone ? 'has-error' : '' %>">
+          <label for="phone">Téléphone</label>
+          <input type="tel" id="phone" name="phone" value="<%= values.phone || '' %>" required
+                 <% if (errors.phone) { %>aria-invalid="true" aria-describedby="phone-error"<% } %>>
+          <% if (errors.phone) { %><p class="error-text" id="phone-error"><%= errors.phone[0] %></p><% } %>
+        </div>
+        <div class="field <%= errors.email ? 'has-error' : '' %>">
+          <label for="email">E-mail</label>
+          <input type="email" id="email" name="email" value="<%= values.email || '' %>" required
+                 <% if (errors.email) { %>aria-invalid="true" aria-describedby="email-error"<% } %>>
+          <% if (errors.email) { %><p class="error-text" id="email-error"><%= errors.email[0] %></p><% } %>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Adresse de livraison</legend>
+        <div class="field <%= errors.address ? 'has-error' : '' %>">
+          <label for="address">Adresse</label>
+          <input type="text" id="address" name="address" value="<%= values.address || '' %>" required
+                 <% if (errors.address) { %>aria-invalid="true" aria-describedby="address-error"<% } %>>
+          <% if (errors.address) { %><p class="error-text" id="address-error"><%= errors.address[0] %></p><% } %>
+        </div>
+        <div class="field <%= errors.city ? 'has-error' : '' %>">
+          <label for="city">Ville</label>
+          <input type="text" id="city" name="city" value="<%= values.city || '' %>" required
+                 <% if (errors.city) { %>aria-invalid="true" aria-describedby="city-error"<% } %>>
+          <% if (errors.city) { %><p class="error-text" id="city-error"><%= errors.city[0] %></p><% } %>
+        </div>
+        <div class="field <%= errors.governorate ? 'has-error' : '' %>">
+          <label for="governorate">Gouvernorat</label>
+          <select id="governorate" name="governorate" required
+                  <% if (errors.governorate) { %>aria-invalid="true" aria-describedby="governorate-error"<% } %>>
+            <option value="">Sélectionner...</option>
+            <% governorates.forEach(function(g) { %>
+              <option value="<%= g %>" <%= values.governorate === g ? 'selected' : '' %>><%= g %></option>
+            <% }); %>
+          </select>
+          <% if (errors.governorate) { %><p class="error-text" id="governorate-error"><%= errors.governorate[0] %></p><% } %>
+        </div>
+      </fieldset>
+
+      <div class="field" style="background: rgba(163,119,151,0.08); border: 1px solid var(--color-4); border-radius: var(--radius-sm); padding: 14px 16px;">
+        <strong style="font-size: 14px;">Paiement à la livraison</strong>
+        <p class="hint" style="margin-top: 4px;">Vous payez en espèces directement au livreur, à la réception de votre commande.</p>
+      </div>
+
+      <% if (errors.form) { %><p class="error-text" role="alert"><%= errors.form[0] %></p><% } %>
+
+      <button type="submit" class="btn btn-lg btn-block" style="margin-top: 20px;">Confirmer la commande</button>
+    </form>
+
+    <aside class="summary-box" aria-label="Résumé de la commande">
+      <h2>Résumé de la commande</h2>
+      <ul class="order-summary-list">
+        <% items.forEach(function(item) { %>
+          <li>
+            <span><%= item.product.name %> × <%= item.quantity %><br><small style="color:var(--color-7);"><%= item.size %> · <%= item.color %></small></span>
+            <span><%= (item.lineTotalCents / 100).toFixed(3) %> DT</span>
+          </li>
+        <% }); %>
+      </ul>
+      <div class="summary-row total"><span>Total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
+    </aside>
+  </div>
+</main>
+
+<%- include('partials/footer') %>
+</body>
+</html>

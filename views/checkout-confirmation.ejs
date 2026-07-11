@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('partials/header') %>
+
+<main id="main" class="container">
+  <div class="confirmation-box">
+    <p class="pd-cat">Commande confirmée</p>
+    <h1>Merci pour votre commande, <%= order.full_name %> !</h1>
+    <p class="order-number">N&deg; <%= order.order_number %></p>
+    <p>Un e-mail de confirmation a été envoyé à <%= order.email %>. Vous serez livré(e) sous 2 à 4 jours à l'adresse indiquée.</p>
+
+    <ul class="order-summary-list" style="text-align:left; margin-top:24px;">
+      <% orderItems.forEach(function(item) { %>
+        <li>
+          <span><%= item.product_name %> × <%= item.quantity %><br><small style="color:var(--color-7);"><%= item.size %> · <%= item.color %></small></span>
+          <span><%= ((item.unit_price_cents * item.quantity) / 100).toFixed(3) %> DT</span>
+        </li>
+      <% }); %>
+    </ul>
+    <div class="summary-row total" style="text-align:left;"><span>Total</span><span><%= (order.total_cents / 100).toFixed(3) %> DT</span></div>
+
+    <a href="/shop" class="btn btn-lg" style="margin-top:28px;">Continuer mes achats</a>
+  </div>
+</main>
+
+<%- include('partials/footer') %>
+</body>
+</html>

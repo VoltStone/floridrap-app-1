@@ -1,0 +1,61 @@
+<div class="topbar">
+  <div class="container">
+    <span>Tél: +216 71 000 000 · Livraison partout en Tunisie</span>
+    <span><a href="/#contact">Nous contacter</a></span>
+  </div>
+</div>
+
+<div class="sticky-top-group">
+  <header class="site-header">
+    <div class="container header-row">
+      <a href="/" class="logo">
+        <img src="/assets/logo.png" alt="Floridrap Plus — accueil">
+        <span>
+          <span class="brand-word">Floridrap Plus</span>
+          <span class="brand-sub">Linge de maison</span>
+        </span>
+      </a>
+
+      <form class="search-form" action="/shop" method="get" role="search">
+        <label for="search-input" class="visually-hidden">Rechercher un produit</label>
+        <input id="search-input" type="text" name="q" placeholder="Rechercher un produit..." value="<%= typeof searchTerm !== 'undefined' ? searchTerm : '' %>">
+        <button type="submit">
+          <span aria-hidden="true">&#128269;</span>
+          <span class="btn-search-label">Rechercher</span>
+        </button>
+      </form>
+
+      <nav class="header-actions" aria-label="Compte et panier">
+        <% if (currentUser) { %>
+          <a href="/account"><span class="icon" aria-hidden="true">&#9776;</span><span class="action-label">Mon compte</span></a>
+          <% if (currentUser.role === 'admin') { %>
+            <a href="/admin"><span class="icon" aria-hidden="true">&#9881;</span><span class="action-label">Administration</span></a>
+          <% } %>
+          <form action="/logout" method="post" style="margin:0;">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit"><span class="icon" aria-hidden="true">&#8677;</span><span class="action-label">Déconnexion</span></button>
+          </form>
+        <% } else { %>
+          <a href="/login"><span class="icon" aria-hidden="true">&#9776;</span><span class="action-label">Connexion</span></a>
+        <% } %>
+        <a href="/cart"><span class="icon" aria-hidden="true">&#128717;</span><span class="action-label">Panier</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <nav class="cat-nav" aria-label="Catégories de produits">
+    <ul>
+      <li><a href="/shop?category=draps" aria-current="<%= activeCategory === 'draps' ? 'page' : 'false' %>">Draps de lit</a></li>
+      <li><a href="/shop?category=taies" aria-current="<%= activeCategory === 'taies' ? 'page' : 'false' %>">Taies d'oreiller</a></li>
+      <li><a href="/shop?category=housses" aria-current="<%= activeCategory === 'housses' ? 'page' : 'false' %>">Housses de couette</a></li>
+      <li><a href="/shop?category=parures" aria-current="<%= activeCategory === 'parures' ? 'page' : 'false' %>">Parures de lit</a></li>
+      <li><a href="/shop?category=couvertures" aria-current="<%= activeCategory === 'couvertures' ? 'page' : 'false' %>">Couvertures</a></li>
+    </ul>
+  </nav>
+</div>
+
+<% if (flash) { %>
+  <div class="container">
+    <div class="flash flash-<%= flash.type %>" role="<%= flash.type === 'error' ? 'alert' : 'status' %>"><%= flash.message %></div>
+  </div>
+<% } %>

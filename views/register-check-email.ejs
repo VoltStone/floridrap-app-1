@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<a href="#main" class="skip-link">Aller au contenu principal</a>
+<%- include('partials/header') %>
+
+<main id="main" class="container">
+  <div class="confirmation-box">
+    <h1>Vérifiez votre e-mail</h1>
+    <p>Un lien de confirmation a été envoyé à <strong><%= email %></strong>. Cliquez dessus pour activer votre compte et pouvoir vous connecter.</p>
+    <p class="hint" style="margin-top: 16px;">Vous ne le voyez pas ? Vérifiez vos courriers indésirables, ou <a href="/resend-verification">demandez un nouveau lien</a>.</p>
+    <a href="/" class="btn btn-lg" style="margin-top: 24px;">Retour à l'accueil</a>
+  </div>
+</main>
+
+<%- include('partials/footer') %>
+</body>
+</html>

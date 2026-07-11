@@ -1,0 +1,33 @@
+{
+  "name": "floridrap-plus",
+  "version": "1.0.0",
+  "description": "Floridrap Plus \u2014 secure e-commerce demo (Node.js/Express/EJS)",
+  "main": "src/server.js",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "NODE_ENV=production node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrate": "node src/db/migrate.js",
+    "db:seed": "node src/db/seed.js",
+    "setup": "npm run db:migrate && npm run db:seed"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.15.15",
+    "argon2": "^0.44.0",
+    "csrf-sync": "^4.2.1",
+    "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "express-session": "^1.19.0",
+    "helmet": "^8.2.0",
+    "morgan": "^1.11.0",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.3",
+    "sharp": "^0.34.5",
+    "zod": "^4.4.3"
+  }
+}
