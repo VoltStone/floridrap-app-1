@@ -51,7 +51,7 @@
           <tr>
             <td><a href="/admin/orders/<%= o.id %>"><%= o.order_number %></a></td>
             <td><%= o.full_name %></td>
-            <td><%= o.created_at %></td>
+            <td><%= formatDate(o.created_at) %></td>
             <td><span class="status-pill status-<%= o.status %>"><%= o.status %></span></td>
             <td><%= (o.total_cents / 100).toFixed(3) %> DT</td>
           </tr>
