@@ -25,21 +25,13 @@ function attachCsrfToken(req, res, next) {
 // security event before the generic error handler turns it into a
 // user-facing 403.
 function csrfProtection(req, res, next) {
-  console.log("=== CSRF DEBUG ===");
-  console.log("Session ID:", req.sessionID);
-  console.log("Session data:", req.session);
-  console.log("Body keys:", Object.keys(req.body || {}));
-  console.log("_csrf value:", req.body?._csrf);
-  console.log("Full body:", req.body);
-  
   csrfSynchronisedProtection(req, res, (err) => {
     if (err) {
-      console.log("CSRF ERROR:", err.message);
+      // LOG NOTHING FROM req.body
       logger.security('csrf_validation_failed', { 
         ip: req.ip,
-        path: req.originalUrl,
-        bodyKeys: Object.keys(req.body || {}),
-        hasCsrf: !!req.body?._csrf
+        path: req.originalUrl
+        // NO body, NO email, NO password
       });
     }
     next(err);
