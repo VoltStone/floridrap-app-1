@@ -25,16 +25,6 @@ function attachCsrfToken(req, res, next) {
 // security event before the generic error handler turns it into a
 // user-facing 403.
 function csrfProtection(req, res, next) {
-  csrfSynchronisedProtection(req, res, (err) => {
-    if (err) {
-      logger.security('csrf_validation_failed', { ip: req.ip, path: req.originalUrl });
-    }
-    next(err);
-  });
-}
-
-module.exports = { attachCsrfToken, csrfProtection };
-function csrfProtection(req, res, next) {
 
   console.log("BODY:", req.body);
   console.log("CSRF RECEIVED:", req.body?._csrf);
