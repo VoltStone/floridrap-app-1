@@ -4,28 +4,35 @@ const nodemailer = require('nodemailer');
 const env = require('../config/env');
 const logger = require('./logger');
 
-const isConfigured = Boolean(env.BREVO_SMTP_USER && env.BREVO_SMTP_KEY && env.EMAIL_FROM);
+// Gmail SMTP. Uses its own two env vars read directly from process.env
+// (rather than being added to the validated schema in config/env.js) so
+// switching providers again later never requires touching that file —
+// only this one, plus .env.
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+
+const isConfigured = Boolean(GMAIL_USER && GMAIL_APP_PASSWORD);
 
 let transporter = null;
 if (isConfigured) {
   transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false, // STARTTLS on port 587, not implicit TLS
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // implicit TLS on 465 (Gmail also supports 587+STARTTLS, but this is simpler)
     auth: {
-      user: env.BREVO_SMTP_USER,
-      pass: env.BREVO_SMTP_KEY,
+      user: GMAIL_USER,
+      pass: GMAIL_APP_PASSWORD, // a 16-character App Password, NOT your normal Gmail password
     },
   });
 } else {
   logger.warn(
-    'Email is not configured (BREVO_SMTP_USER / BREVO_SMTP_KEY / EMAIL_FROM missing) — ' +
-      'emails will be logged instead of sent. See .env.example.'
+    'Email is not configured (GMAIL_USER / GMAIL_APP_PASSWORD missing) — ' +
+      'emails will be logged instead of sent. See .env.'
   );
 }
 
 /**
- * Sends an email if Brevo is configured; otherwise logs what would have
+ * Sends an email if Gmail is configured; otherwise logs what would have
  * been sent and resolves anyway. Callers should never let a failed send
  * here break the user-facing flow that triggered it (e.g. an order still
  * completes even if the confirmation email fails) — this function
@@ -39,7 +46,11 @@ async function sendMail({ to, subject, html, text }) {
   }
 
   const info = await transporter.sendMail({
-    from: `"${env.EMAIL_FROM_NAME}" <${env.EMAIL_FROM}>`,
+    // Gmail always sends from the authenticated account regardless of what
+    // "from" address you provide — it silently rewrites (or rejects) a
+    // mismatched one. Using GMAIL_USER here avoids that mismatch; the
+    // human-readable name still comes from EMAIL_FROM_NAME.
+    from: `"${env.EMAIL_FROM_NAME}" <${GMAIL_USER}>`,
     to,
     subject,
     html,
