@@ -16,6 +16,8 @@ const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 // now the only option that works at all: a serverless host like Vercel
 // has no writable, persistent local disk to stage files on in the first
 // place.
+const MAX_GALLERY_FILES = 6; // matches productImageRepository.MAX_IMAGES_PER_PRODUCT
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 1 },
@@ -27,6 +29,20 @@ const upload = multer({
     cb(null, ALLOWED_MIME_TYPES.has(file.mimetype));
   },
 }).single('image');
+
+// Same multer config as `upload` above, just accepting several files
+// under one field name instead of exactly one — used for the product
+// photo gallery. `files: MAX_GALLERY_FILES` caps this at the multer
+// level (rejected before any file is even fully received) as well as
+// the count re-checked in the route against how many gallery images the
+// product already has.
+const uploadMultiple = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_SIZE_BYTES, files: MAX_GALLERY_FILES },
+  fileFilter(req, file, cb) {
+    cb(null, ALLOWED_MIME_TYPES.has(file.mimetype));
+  },
+}).array('images', MAX_GALLERY_FILES);
 
 /**
  * Wraps multer so its errors (oversized file, wrong field name, wrong
@@ -52,6 +68,54 @@ function uploadImage(req, res, next) {
 }
 
 /**
+ * Same wrapping as uploadImage() above, for the multi-file gallery field.
+ */
+function uploadGalleryImages(req, res, next) {
+  uploadMultiple(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      req.uploadError =
+        err.code === 'LIMIT_FILE_SIZE'
+          ? "Une image dépasse la taille maximale autorisée (5 Mo)."
+          : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE'
+            ? `Vous ne pouvez pas envoyer plus de ${MAX_GALLERY_FILES} photos à la fois.`
+            : "Un des fichiers envoyés n'est pas valide.";
+    } else if (err) {
+      logger.error('Unexpected gallery upload error', err);
+      req.uploadError = "Une erreur est survenue lors de l'envoi des photos.";
+    } else if (req.files && req.files.some((f) => !ALLOWED_MIME_TYPES.has(f.mimetype))) {
+      req.uploadError = 'Formats acceptés : JPEG, PNG, WebP.';
+    }
+    next();
+  });
+}
+
+/**
+ * The real validation + re-encoding for a single already-received file
+ * buffer, shared by both the single-photo and gallery upload paths.
+ * Throws (rather than returning an error string) on invalid content —
+ * callers decide how to turn that into a user-facing message, since the
+ * single-image and gallery routes want slightly different wording.
+ */
+async function validateAndReencode(buffer) {
+  const image = sharp(buffer, { failOn: 'error' });
+  const metadata = await image.metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error('not_an_image');
+  }
+  if (metadata.width > MAX_DIMENSION_PX || metadata.height > MAX_DIMENSION_PX) {
+    throw new Error('too_large');
+  }
+
+  const outBuffer = await image
+    .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer(); // sharp re-encodes fresh bytes here — never the original upload
+
+  return { base64: outBuffer.toString('base64'), mime: 'image/webp' };
+}
+
+/**
  * The real validation + sanitization step. Attempts to actually decode
  * the uploaded bytes as an image with sharp (which sniffs real file
  * structure, not the claimed content-type) and, on success, re-encodes
@@ -70,24 +134,7 @@ async function processProductImage(req, res, next) {
   }
 
   try {
-    const image = sharp(req.file.buffer, { failOn: 'error' });
-    const metadata = await image.metadata();
-
-    if (!metadata.width || !metadata.height) {
-      req.uploadError = "Le fichier envoyé n'est pas une image valide.";
-      return next();
-    }
-    if (metadata.width > MAX_DIMENSION_PX || metadata.height > MAX_DIMENSION_PX) {
-      req.uploadError = 'Image trop grande (dimensions maximales : 6000x6000px).';
-      return next();
-    }
-
-    const buffer = await image
-      .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 82 })
-      .toBuffer(); // sharp re-encodes fresh bytes here — never the original upload
-
-    req.uploadedImage = { base64: buffer.toString('base64'), mime: 'image/webp' };
+    req.uploadedImage = await validateAndReencode(req.file.buffer);
     next();
   } catch (err) {
     // sharp throws when the bytes aren't a genuine, decodable image at
@@ -95,10 +142,52 @@ async function processProductImage(req, res, next) {
     // polyglot. This is the actual security boundary, not the
     // extension/MIME-type check above.
     logger.security('image_upload_rejected_invalid_content', { ip: req.ip, userId: req.user && req.user.id });
-    req.uploadError = "Le fichier envoyé n'est pas une image valide.";
+    req.uploadError =
+      err.message === 'too_large'
+        ? 'Image trop grande (dimensions maximales : 6000x6000px).'
+        : "Le fichier envoyé n'est pas une image valide.";
     next();
   }
 }
 
-module.exports = { uploadImage, processProductImage };
+/**
+ * Same validation as processProductImage, applied to every file in a
+ * gallery upload. The whole batch is rejected together if any single
+ * file is invalid, rather than silently skipping the bad one and saving
+ * the rest — a partial success here would be confusing (the admin
+ * selected N photos, expects N to appear) and it's simple to just ask
+ * them to fix and re-select.
+ */
+async function processGalleryImages(req, res, next) {
+  if (req.uploadError || !req.files || req.files.length === 0) {
+    return next();
+  }
+
+  try {
+    const results = [];
+    for (const file of req.files) {
+      results.push(await validateAndReencode(file.buffer));
+    }
+    req.uploadedGalleryImages = results;
+    next();
+  } catch (err) {
+    logger.security('gallery_image_upload_rejected_invalid_content', {
+      ip: req.ip,
+      userId: req.user && req.user.id,
+    });
+    req.uploadError =
+      err.message === 'too_large'
+        ? 'Une image dépasse les dimensions maximales autorisées (6000x6000px).'
+        : "Un des fichiers envoyés n'est pas une image valide.";
+    next();
+  }
+}
+
+module.exports = {
+  uploadImage,
+  processProductImage,
+  uploadGalleryImages,
+  processGalleryImages,
+  MAX_GALLERY_FILES,
+};
 

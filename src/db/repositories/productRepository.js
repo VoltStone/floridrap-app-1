@@ -252,6 +252,10 @@ async function remove(id) {
   if (referenced > 0) {
     throw new Error(`Cannot delete product ${id}: referenced by ${referenced} order item(s)`);
   }
+  // Same reasoning as above: ON DELETE CASCADE on product_images isn't
+  // relied on alone for the same remote-connection reason, so gallery
+  // photos are removed explicitly before the product itself.
+  await db.execute({ sql: 'DELETE FROM product_images WHERE product_id = ?', args: [id] });
   await db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
 }
 

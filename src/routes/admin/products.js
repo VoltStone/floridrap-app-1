@@ -2,9 +2,10 @@
 
 const express = require('express');
 const productRepository = require('../../db/repositories/productRepository');
+const productImageRepository = require('../../db/repositories/productImageRepository');
 const { validateBody } = require('../../middleware/validate');
 const { productSchema } = require('../../schemas/adminSchemas');
-const { processProductImage } = require('../../middleware/upload');
+const { processProductImage, processGalleryImages } = require('../../middleware/upload');
 const asyncHandler = require('../../utils/asyncHandler');
 const { setFlash } = require('../../utils/flash');
 
@@ -87,6 +88,8 @@ router.get(
       title: `Modifier ${product.name} — Administration`,
       mode: 'edit',
       product,
+      galleryImages: await productImageRepository.listForProduct(id),
+      maxGalleryImages: productImageRepository.MAX_IMAGES_PER_PRODUCT,
       values: {
         name: product.name,
         category: product.category,
@@ -123,6 +126,8 @@ router.post(
         title: `Modifier ${product.name} — Administration`,
         mode: 'edit',
         product,
+        galleryImages: await productImageRepository.listForProduct(id),
+        maxGalleryImages: productImageRepository.MAX_IMAGES_PER_PRODUCT,
         values: req.body,
         errors: req.validationErrors,
         categoryLabels: CATEGORY_LABELS,
@@ -157,6 +162,81 @@ router.post(
 
     await productRepository.updateImage(id, req.uploadedImage);
     setFlash(req, 'success', 'Photo mise à jour.');
+    res.redirect(`/admin/products/${id}/edit`);
+  })
+);
+
+// Gallery upload is its own endpoint too, same reasoning as the primary
+// image upload above — separate from the main product form, and separate
+// from the single-image endpoint since it accepts several files under a
+// different field name with its own count cap.
+router.post(
+  '/:id/gallery',
+  processGalleryImages,
+  asyncHandler(async (req, res) => {
+    const id = parseId(req, res);
+    if (id === null) return;
+    const product = await productRepository.getById(id);
+    if (!product) {
+      return res.status(404).render('error', { title: 'Introuvable', message: "Ce produit n'existe pas." });
+    }
+
+    if (req.uploadError) {
+      setFlash(req, 'error', req.uploadError);
+      return res.redirect(`/admin/products/${id}/edit`);
+    }
+    if (!req.uploadedGalleryImages || req.uploadedGalleryImages.length === 0) {
+      setFlash(req, 'error', 'Veuillez choisir au moins une photo.');
+      return res.redirect(`/admin/products/${id}/edit`);
+    }
+
+    // Re-checked here (not just capped at the multer level) because that
+    // cap only limits a single upload batch — this also accounts for
+    // photos already in the gallery from previous uploads.
+    const currentCount = await productImageRepository.countForProduct(id);
+    const max = productImageRepository.MAX_IMAGES_PER_PRODUCT;
+    if (currentCount + req.uploadedGalleryImages.length > max) {
+      setFlash(
+        req,
+        'error',
+        `Cela dépasserait la limite de ${max} photos de galerie (actuellement ${currentCount}). Retirez-en avant d'en ajouter d'autres.`
+      );
+      return res.redirect(`/admin/products/${id}/edit`);
+    }
+
+    let sortOrder = currentCount;
+    for (const image of req.uploadedGalleryImages) {
+      await productImageRepository.add(id, image, sortOrder);
+      sortOrder += 1;
+    }
+
+    setFlash(
+      req,
+      'success',
+      req.uploadedGalleryImages.length === 1
+        ? 'Photo ajoutée à la galerie.'
+        : `${req.uploadedGalleryImages.length} photos ajoutées à la galerie.`
+    );
+    res.redirect(`/admin/products/${id}/edit`);
+  })
+);
+
+router.post(
+  '/:id/gallery/:imageId/delete',
+  asyncHandler(async (req, res) => {
+    const id = parseId(req, res);
+    if (id === null) return;
+    const imageId = Number(req.params.imageId);
+    if (!Number.isInteger(imageId) || imageId <= 0) {
+      return res.status(404).render('error', { title: 'Introuvable', message: "Cette photo n'existe pas." });
+    }
+    const product = await productRepository.getById(id);
+    if (!product) {
+      return res.status(404).render('error', { title: 'Introuvable', message: "Ce produit n'existe pas." });
+    }
+
+    await productImageRepository.remove(imageId, id);
+    setFlash(req, 'success', 'Photo retirée de la galerie.');
     res.redirect(`/admin/products/${id}/edit`);
   })
 );

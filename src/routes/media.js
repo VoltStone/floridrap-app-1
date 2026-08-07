@@ -2,6 +2,7 @@
 
 const express = require('express');
 const productRepository = require('../db/repositories/productRepository');
+const productImageRepository = require('../db/repositories/productImageRepository');
 const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
@@ -28,6 +29,26 @@ router.get(
     // long/immutable cache would show a stale image after a replacement
     // for up to that long. An hour is a reasonable balance for a small
     // product catalog that doesn't change photos constantly.
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(Buffer.from(image.base64, 'base64'));
+  })
+);
+
+// Same as above, for additional gallery photos. A separate route rather
+// than reusing /media/product/:id with a query param, since the two
+// serve from entirely different tables and this keeps that distinction
+// visible in the URL itself.
+router.get(
+  '/media/product-image/:id',
+  asyncHandler(async (req, res) => {
+    if (!ID_PATTERN.test(req.params.id)) {
+      return res.status(404).end();
+    }
+    const image = await productImageRepository.getImageData(Number(req.params.id));
+    if (!image) {
+      return res.status(404).end();
+    }
+    res.set('Content-Type', image.mime);
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(Buffer.from(image.base64, 'base64'));
   })

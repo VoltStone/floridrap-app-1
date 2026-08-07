@@ -322,22 +322,79 @@ legend { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; col
 /* ---------- Product page ---------- */
 .product-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; margin: 28px 0 60px; }
 
+.gallery { position: relative; }
 .gallery input[type="radio"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .gallery figure { display: none; margin: 0; border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.6); aspect-ratio: 1/1; overflow: hidden; box-shadow: var(--shadow-md); }
 .gallery figure img { width: 100%; height: 100%; object-fit: cover; }
 .gallery input:nth-of-type(1):checked ~ figure:nth-of-type(1),
 .gallery input:nth-of-type(2):checked ~ figure:nth-of-type(2),
 .gallery input:nth-of-type(3):checked ~ figure:nth-of-type(3),
-.gallery input:nth-of-type(4):checked ~ figure:nth-of-type(4) { display: block; }
-.gallery-thumbs { display: flex; gap: 10px; margin-top: 12px; }
+.gallery input:nth-of-type(4):checked ~ figure:nth-of-type(4),
+.gallery input:nth-of-type(5):checked ~ figure:nth-of-type(5),
+.gallery input:nth-of-type(6):checked ~ figure:nth-of-type(6),
+.gallery input:nth-of-type(7):checked ~ figure:nth-of-type(7) { display: block; }
+.gallery-thumbs { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 .gallery-thumbs label { width: 76px; height: 76px; border-radius: var(--radius-sm); border: 1px solid var(--color-3); overflow: hidden; cursor: pointer; display: block; transition: border-color var(--ease), transform var(--ease); }
 .gallery-thumbs label:hover { transform: translateY(-2px); }
 .gallery-thumbs label img { width: 100%; height: 100%; object-fit: cover; }
 .gallery input:nth-of-type(1):checked ~ .gallery-thumbs label:nth-of-type(1),
 .gallery input:nth-of-type(2):checked ~ .gallery-thumbs label:nth-of-type(2),
 .gallery input:nth-of-type(3):checked ~ .gallery-thumbs label:nth-of-type(3),
-.gallery input:nth-of-type(4):checked ~ .gallery-thumbs label:nth-of-type(4) { border-color: var(--color-5); border-width: 2px; box-shadow: var(--glow-mauve); }
+.gallery input:nth-of-type(4):checked ~ .gallery-thumbs label:nth-of-type(4),
+.gallery input:nth-of-type(5):checked ~ .gallery-thumbs label:nth-of-type(5),
+.gallery input:nth-of-type(6):checked ~ .gallery-thumbs label:nth-of-type(6),
+.gallery input:nth-of-type(7):checked ~ .gallery-thumbs label:nth-of-type(7) { border-color: var(--color-5); border-width: 2px; box-shadow: var(--glow-mauve); }
 .gallery input:focus-visible ~ .gallery-thumbs label { outline: none; }
+
+/* Prev/next arrows — cycle through images by clicking, no JavaScript.
+   Each arrow is a <label> targeting a specific image's radio input (the
+   "next"/"previous" index, wrapping around, is computed server-side in
+   the view since it depends on how many images this particular product
+   actually has). Every arrow for every index lives in the markup at
+   once; only the pair belonging to the currently-checked image is made
+   visible, via the same :checked sibling-selector pattern as the
+   figures/thumbnails above. */
+.gallery-arrows label {
+  display: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(23, 20, 26, 0.55);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  transition: background var(--ease), transform var(--ease);
+}
+.gallery-arrows label:hover { background: rgba(23, 20, 26, 0.8); }
+.gallery-arrows label:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.gallery-arrows .gallery-prev { left: 14px; }
+.gallery-arrows .gallery-next { right: 14px; }
+.gallery input:nth-of-type(1):checked ~ .gallery-arrows .gallery-prev-1,
+.gallery input:nth-of-type(1):checked ~ .gallery-arrows .gallery-next-1,
+.gallery input:nth-of-type(2):checked ~ .gallery-arrows .gallery-prev-2,
+.gallery input:nth-of-type(2):checked ~ .gallery-arrows .gallery-next-2,
+.gallery input:nth-of-type(3):checked ~ .gallery-arrows .gallery-prev-3,
+.gallery input:nth-of-type(3):checked ~ .gallery-arrows .gallery-next-3,
+.gallery input:nth-of-type(4):checked ~ .gallery-arrows .gallery-prev-4,
+.gallery input:nth-of-type(4):checked ~ .gallery-arrows .gallery-next-4,
+.gallery input:nth-of-type(5):checked ~ .gallery-arrows .gallery-prev-5,
+.gallery input:nth-of-type(5):checked ~ .gallery-arrows .gallery-next-5,
+.gallery input:nth-of-type(6):checked ~ .gallery-arrows .gallery-prev-6,
+.gallery input:nth-of-type(6):checked ~ .gallery-arrows .gallery-next-6,
+.gallery input:nth-of-type(7):checked ~ .gallery-arrows .gallery-prev-7,
+.gallery input:nth-of-type(7):checked ~ .gallery-arrows .gallery-next-7 { display: flex; }
+
+@media (max-width: 600px) {
+  .gallery-arrows label { width: 38px; height: 38px; font-size: 17px; }
+}
 
 .pd-cat { font-size: 12px; color: var(--color-5-text); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
 .pd-title { font-size: 32px; margin: 8px 0 14px; line-height: 1.2; }

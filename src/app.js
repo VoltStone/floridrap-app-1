@@ -11,7 +11,7 @@ const securityMiddleware = require("./middleware/security");
 const { globalLimiter } = require("./middleware/rateLimiters");
 const { attachCsrfToken, csrfProtection } = require("./middleware/csrf");
 const { attachUser } = require("./middleware/auth");
-const { uploadImage } = require("./middleware/upload");
+const { uploadImage, uploadGalleryImages } = require("./middleware/upload");
 const { attachFlash } = require("./utils/flash");
 const formatDate = require("./utils/formatDate");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
@@ -119,6 +119,13 @@ app.use((req, res, next) => {
 app.use("/admin/products/:id/image", (req, res, next) => {
   if (req.method !== "POST") return next();
   uploadImage(req, res, next);
+});
+
+// Same reasoning as the single-image mount above, for the multi-file
+// gallery upload endpoint.
+app.use("/admin/products/:id/gallery", (req, res, next) => {
+  if (req.method !== "POST") return next();
+  uploadGalleryImages(req, res, next);
 });
 
 // 7. CSRF protection applies globally and automatically skips safe methods

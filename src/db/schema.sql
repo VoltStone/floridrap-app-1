@@ -47,6 +47,25 @@ CREATE TABLE IF NOT EXISTS products (
 -- uploaded photo) so every view template's <img src="<%= p.image_url %>">
 -- keeps working unchanged.
 
+-- Additional gallery photos beyond the one primary image_url above,
+-- shown as a cycle-able gallery on the product detail page. Same
+-- base64-in-database storage as the primary photo, same reasoning
+-- (no persistent disk on a serverless host). ON DELETE CASCADE: a
+-- product's gallery photos are only ever meaningful attached to that
+-- product, unlike order_items (which deliberately does NOT cascade,
+-- since historical order line items must survive a product being
+-- discontinued).
+CREATE TABLE IF NOT EXISTS product_images (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id  INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  image_data  TEXT NOT NULL,
+  image_mime  TEXT NOT NULL,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id);
+
 -- Session storage: sessions must survive across serverless invocations
 -- (each may be a different, short-lived instance with no shared memory),
 -- so — like the data above — they're kept in the same database instead

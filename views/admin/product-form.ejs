@@ -120,6 +120,42 @@
             <button type="submit" class="btn btn-outline">Envoyer la photo</button>
           </form>
         </div>
+
+        <div class="admin-image-panel" style="margin-top:20px;">
+          <h2 style="font-size:15px; margin-bottom:4px;">Galerie</h2>
+          <p class="hint" style="margin-bottom:14px;">
+            Photos supplémentaires que les clients peuvent parcourir sur la fiche produit
+            (<%= galleryImages.length %>/<%= maxGalleryImages %>).
+          </p>
+
+          <% if (galleryImages.length > 0) { %>
+            <ul style="list-style:none; margin:0 0 16px; padding:0; display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;">
+              <% galleryImages.forEach(function(img) { %>
+                <li style="position:relative;">
+                  <img src="<%= img.url %>" alt="" style="width:100%; aspect-ratio:1/1; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--color-3);">
+                  <form action="/admin/products/<%= product.id %>/gallery/<%= img.id %>/delete" method="post" style="margin-top:6px;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn-danger-text">Retirer</button>
+                  </form>
+                </li>
+              <% }); %>
+            </ul>
+          <% } %>
+
+          <% if (galleryImages.length < maxGalleryImages) { %>
+            <form action="/admin/products/<%= product.id %>/gallery" method="post" enctype="multipart/form-data">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="field">
+                <label for="gallery-images">Ajouter des photos</label>
+                <input type="file" id="gallery-images" name="images" accept="image/jpeg,image/png,image/webp" multiple required>
+                <p class="hint">JPEG, PNG ou WebP, 5 Mo max chacune. Vous pouvez en sélectionner plusieurs à la fois.</p>
+              </div>
+              <button type="submit" class="btn btn-outline">Ajouter à la galerie</button>
+            </form>
+          <% } else { %>
+            <p class="hint">Limite de <%= maxGalleryImages %> photos de galerie atteinte. Retirez-en une pour en ajouter une autre.</p>
+          <% } %>
+        </div>
       <% } else { %>
         <div class="admin-image-panel">
           <p class="hint">Vous pourrez ajouter une photo une fois le produit créé.</p>

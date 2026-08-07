@@ -16,9 +16,35 @@
 
   <div class="product-layout">
     <div>
-      <figure style="border:1px solid var(--color-3); aspect-ratio:1/1; overflow:hidden; margin:0;">
-        <img src="<%= product.image_url %>" alt="<%= product.name %>" style="width:100%; height:100%; object-fit:cover;">
-      </figure>
+      <div class="gallery">
+        <% images.forEach(function(img, i) { %>
+          <input type="radio" name="gallery" id="gallery-img-<%= i + 1 %>" <%= i === 0 ? 'checked' : '' %>>
+        <% }); %>
+        <% images.forEach(function(img, i) { %>
+          <figure>
+            <img src="<%= img.url %>" alt="<%= product.name %><%= images.length > 1 ? ` — photo ${i + 1} sur ${images.length}` : '' %>">
+          </figure>
+        <% }); %>
+        <% if (images.length > 1) { %>
+          <div class="gallery-arrows">
+            <% images.forEach(function(img, i) {
+                 var n = images.length;
+                 var prevIndex = (i === 0 ? n : i) ; // 1-based: wraps to last
+                 var nextIndex = (i === n - 1 ? 1 : i + 2); // 1-based: wraps to first
+            %>
+              <label for="gallery-img-<%= prevIndex %>" class="gallery-prev gallery-prev-<%= i + 1 %>" aria-label="Photo précédente">&#8249;</label>
+              <label for="gallery-img-<%= nextIndex %>" class="gallery-next gallery-next-<%= i + 1 %>" aria-label="Photo suivante">&#8250;</label>
+            <% }); %>
+          </div>
+          <div class="gallery-thumbs">
+            <% images.forEach(function(img, i) { %>
+              <label for="gallery-img-<%= i + 1 %>">
+                <img src="<%= img.url %>" alt="">
+              </label>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
     </div>
 
     <div>
