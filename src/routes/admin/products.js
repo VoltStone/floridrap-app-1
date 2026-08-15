@@ -100,6 +100,9 @@ router.get(
         care: product.care,
         sizes: product.sizes.join(', '),
         colors: product.colors.join(', '),
+        sizePrices: Object.entries(product.sizePrices || {})
+          .map(([size, cents]) => `${size}:${(cents / 100).toFixed(3)}`)
+          .join('\n'),
         inStock: product.in_stock ? 'on' : '',
         isBestSeller: product.is_best_seller ? 'on' : '',
         isNew: product.is_new ? 'on' : '',

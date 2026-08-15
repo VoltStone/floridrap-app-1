@@ -37,10 +37,20 @@ router.get(
     const galleryImages = await productImageRepository.listForProduct(product.id);
     const images = [{ url: product.image_url }, ...galleryImages];
 
+    // One resolved price per size (falls back to the base price for any
+    // size without its own override) — computed here rather than in the
+    // view, keeping productRepository as the single place that decides
+    // "what does size X actually cost".
+    const sizePriceList = product.sizes.map((size) => ({
+      size,
+      priceCents: productRepository.getPriceForSize(product, size),
+    }));
+
     res.render('product', {
       title: `${product.name} — Floridrap Plus`,
       product,
       images,
+      sizePriceList,
       related,
     });
   })

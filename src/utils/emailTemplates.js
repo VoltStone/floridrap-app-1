@@ -73,6 +73,16 @@ function orderConfirmationEmail({ order, items }) {
     <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
       ${itemRows}
     </table>
+    <table style="width:100%; border-collapse: collapse; font-size: 14px;">
+      <tr>
+        <td style="padding: 4px 0; color:#5c5763;">Sous-total</td>
+        <td style="padding: 4px 0; text-align:right;">${(order.subtotal_cents / 100).toFixed(3)} DT</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 0; color:#5c5763;">Livraison</td>
+        <td style="padding: 4px 0; text-align:right;">+${((order.total_cents - order.subtotal_cents) / 100).toFixed(3)} DT</td>
+      </tr>
+    </table>
     <p style="font-size: 16px; font-weight: 700; text-align:right;">
       Total : ${(order.total_cents / 100).toFixed(3)} DT
     </p>
@@ -82,7 +92,7 @@ function orderConfirmationEmail({ order, items }) {
     </p>
   `);
 
-  const text = `Merci pour votre commande, ${order.full_name} !\nCommande n° ${order.order_number}\nTotal : ${(order.total_cents / 100).toFixed(3)} DT\nLivraison à : ${order.address}, ${order.city}, ${order.governorate}\nPaiement à la livraison.`;
+  const text = `Merci pour votre commande, ${order.full_name} !\nCommande n° ${order.order_number}\nSous-total : ${(order.subtotal_cents / 100).toFixed(3)} DT\nLivraison : +${((order.total_cents - order.subtotal_cents) / 100).toFixed(3)} DT\nTotal : ${(order.total_cents / 100).toFixed(3)} DT\nLivraison à : ${order.address}, ${order.city}, ${order.governorate}\nPaiement à la livraison.`;
 
   return { subject: `Confirmation de commande ${order.order_number} — Floridrap Plus`, html, text };
 }

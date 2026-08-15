@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS products (
   care                  TEXT NOT NULL,
   sizes                 TEXT NOT NULL,   -- JSON array, e.g. ["140x190","160x200"]
   colors                TEXT NOT NULL,   -- JSON array, e.g. ["Anthracite","Mauve"]
+  size_prices           TEXT,            -- JSON object, e.g. {"180x200": 12900}. Sizes not
+                                          -- listed here (or when this is NULL entirely) fall
+                                          -- back to price_cents — see productRepository.getPriceForSize.
   in_stock              INTEGER NOT NULL DEFAULT 1,
   is_best_seller        INTEGER NOT NULL DEFAULT 0,
   is_new                INTEGER NOT NULL DEFAULT 0,

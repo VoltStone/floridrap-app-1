@@ -11,6 +11,7 @@ const { setFlash } = require('../utils/flash');
 const { sendMail } = require('../utils/mailer');
 const { orderConfirmationEmail } = require('../utils/emailTemplates');
 const logger = require('../utils/logger');
+const { DELIVERY_FEE_CENTS } = require('../config/constants');
 
 const router = express.Router();
 
@@ -26,6 +27,7 @@ router.get(
       title: 'Commande — Floridrap Plus',
       items,
       subtotalCents,
+      deliveryFeeCents: DELIVERY_FEE_CENTS,
       governorates: GOVERNORATES,
       values: req.user ? { fullName: req.user.name, email: req.user.email } : {},
       errors: {},
@@ -50,6 +52,7 @@ router.post(
         title: 'Commande — Floridrap Plus',
         items,
         subtotalCents,
+        deliveryFeeCents: DELIVERY_FEE_CENTS,
         governorates: GOVERNORATES,
         values: req.body,
         errors: req.validationErrors,
@@ -57,16 +60,18 @@ router.post(
     }
 
     // Authoritative order data is built entirely from server-side state
-    // (today's product prices + names from the DB) — the validated form
-    // fields only carry shipping/contact details, never price. This is
-    // what prevents a manipulated form field from changing what the
-    // customer is actually charged.
+    // (today's product prices/size-overrides + names from the DB) — the
+    // validated form fields only carry shipping/contact details, never
+    // price. i.unitPriceCents was already resolved per-size by
+    // cart.hydrate() above (productRepository.getPriceForSize), so this
+    // is what prevents a manipulated form field from changing what the
+    // customer is actually charged, regardless of which size they picked.
     const orderItems = items.map((i) => ({
       productId: i.product.id,
       name: i.product.name,
       size: i.size,
       color: i.color,
-      unitPriceCents: i.product.price_cents,
+      unitPriceCents: i.unitPriceCents,
       quantity: i.quantity,
     }));
 

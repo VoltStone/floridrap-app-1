@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const db = require('../connection');
+const { DELIVERY_FEE_CENTS } = require('../../config/constants');
 
 function generateOrderNumber() {
   // Random, non-sequential order numbers so a customer can't enumerate
@@ -17,7 +18,7 @@ function generateOrderNumber() {
  */
 async function createOrder({ userId, customer, paymentMethod, items }) {
   const subtotalCents = items.reduce((sum, i) => sum + i.unitPriceCents * i.quantity, 0);
-  const totalCents = subtotalCents; // flat-rate/free shipping in this demo
+  const totalCents = subtotalCents + DELIVERY_FEE_CENTS;
   const orderNumber = generateOrderNumber();
 
   const tx = await db.transaction('write');

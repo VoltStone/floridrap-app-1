@@ -84,7 +84,9 @@
           </li>
         <% }); %>
       </ul>
-      <div class="summary-row total"><span>Total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
+      <div class="summary-row"><span>Sous-total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
+      <div class="summary-row"><span>Livraison</span><span>+<%= (deliveryFeeCents / 100).toFixed(3) %> DT</span></div>
+      <div class="summary-row total"><span>Total</span><span><%= ((subtotalCents + deliveryFeeCents) / 100).toFixed(3) %> DT</span></div>
     </aside>
   </div>
 </main>

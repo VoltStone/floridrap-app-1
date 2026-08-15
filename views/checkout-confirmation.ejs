@@ -22,6 +22,8 @@
         </li>
       <% }); %>
     </ul>
+    <div class="summary-row" style="text-align:left;"><span>Sous-total</span><span><%= (order.subtotal_cents / 100).toFixed(3) %> DT</span></div>
+    <div class="summary-row" style="text-align:left;"><span>Livraison</span><span>+<%= ((order.total_cents - order.subtotal_cents) / 100).toFixed(3) %> DT</span></div>
     <div class="summary-row total" style="text-align:left;"><span>Total</span><span><%= (order.total_cents / 100).toFixed(3) %> DT</span></div>
 
     <a href="/shop" class="btn btn-lg" style="margin-top:28px;">Continuer mes achats</a>

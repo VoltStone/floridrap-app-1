@@ -47,11 +47,13 @@
       </div>
     </div>
 
-    <div>
+    <div class="product-info-col">
       <p class="pd-cat"><%= product.category %></p>
       <h1 class="pd-title"><%= product.name %></h1>
       <div class="pd-price-row">
-        <span class="pd-price"><%= product.price.toFixed(3) %> DT</span>
+        <% sizePriceList.forEach(function(sp, i) { %>
+          <span class="pd-price price-for-size-<%= i %>"><%= (sp.priceCents / 100).toFixed(3) %> DT</span>
+        <% }); %>
         <% if (product.compareAtPrice) { %><span class="pd-price-old"><%= product.compareAtPrice.toFixed(3) %> DT</span><% } %>
       </div>
       <p class="pd-desc"><%= product.description %></p>

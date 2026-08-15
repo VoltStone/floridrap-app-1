@@ -66,7 +66,11 @@ async function hydrate(req) {
       droppedAny = true;
       continue;
     }
-    const lineTotalCents = product.price_cents * line.quantity;
+    // Resolved fresh from the product's current price/size-overrides on
+    // every hydrate — same principle as before (never trust a price
+    // carried over from when the item was added), just size-aware now.
+    const unitPriceCents = productRepository.getPriceForSize(product, line.size);
+    const lineTotalCents = unitPriceCents * line.quantity;
     subtotalCents += lineTotalCents;
     items.push({
       lineId: line.lineId,
@@ -75,6 +79,7 @@ async function hydrate(req) {
       color: line.color,
       quantity: line.quantity,
       product,
+      unitPriceCents,
       lineTotalCents,
     });
   }

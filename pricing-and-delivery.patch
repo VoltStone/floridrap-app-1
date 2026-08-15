@@ -1,0 +1,568 @@
+diff --git a/public/css/style.css b/public/css/style.css
+index 1000b50..c2e21a7 100644
+--- a/public/css/style.css
++++ b/public/css/style.css
+@@ -401,6 +401,26 @@ legend { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; col
+ .pd-title { font-size: 32px; margin: 8px 0 14px; line-height: 1.2; }
+ .pd-price-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+ .pd-price { font-size: 27px; font-weight: 700; background: var(--grad-btn); -webkit-background-clip: text; background-clip: text; color: transparent; }
++
++/* Per-size pricing: one price span per size is rendered (see product.ejs),
++   all hidden by default, and :has() reveals only the one matching
++   whichever size radio is currently checked anywhere in the info column
++   — this works regardless of DOM order between the price row and the
++   size selector below it, unlike a plain ~ sibling selector. Capped at
++   12 to match the admin form's maximum size count (csvListField(12)). */
++.product-info-col .pd-price { display: none; }
++.product-info-col:has(#size-0:checked) .price-for-size-0,
++.product-info-col:has(#size-1:checked) .price-for-size-1,
++.product-info-col:has(#size-2:checked) .price-for-size-2,
++.product-info-col:has(#size-3:checked) .price-for-size-3,
++.product-info-col:has(#size-4:checked) .price-for-size-4,
++.product-info-col:has(#size-5:checked) .price-for-size-5,
++.product-info-col:has(#size-6:checked) .price-for-size-6,
++.product-info-col:has(#size-7:checked) .price-for-size-7,
++.product-info-col:has(#size-8:checked) .price-for-size-8,
++.product-info-col:has(#size-9:checked) .price-for-size-9,
++.product-info-col:has(#size-10:checked) .price-for-size-10,
++.product-info-col:has(#size-11:checked) .price-for-size-11 { display: inline; }
+ .pd-price-old { font-size: 15px; color: var(--color-7); text-decoration: line-through; }
+ .pd-desc { color: var(--color-7); font-size: 15px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--color-3); }
+ .opt-block { margin-bottom: 22px; }
+diff --git a/src/config/constants.js b/src/config/constants.js
+new file mode 100644
+index 0000000..a827776
+--- /dev/null
++++ b/src/config/constants.js
+@@ -0,0 +1,11 @@
++'use strict';
++
++// Flat delivery fee added at checkout and shown to the customer as its
++// own line, separate from the product subtotal — the shop currently
++// delivers everywhere in Tunisia at a single flat rate rather than a
++// rate that varies by governorate/weight/etc. If that ever needs to
++// vary, this is the one place that would change; every view/email that
++// shows a delivery line reads from here rather than hardcoding 600.
++const DELIVERY_FEE_CENTS = 600; // 6.000 DT
++
++module.exports = { DELIVERY_FEE_CENTS };
+diff --git a/src/db/migrate.js b/src/db/migrate.js
+index 5e4d8b0..9fd78f8 100644
+--- a/src/db/migrate.js
++++ b/src/db/migrate.js
+@@ -114,19 +114,28 @@ async function upgradeUsersTableIfNeeded() {
+ /**
+  * Adds the two columns that let an uploaded product photo be stored in
+  * the database itself (see schema.sql for why) rather than on local
+- * disk, for a products table that predates this change.
++ * disk, plus (added later) the per-size price override column — for a
++ * products table that predates either change. Both are simple nullable
++ * ADD COLUMNs, checked and applied independently so a database missing
++ * only one of them (e.g. already has image_data from an earlier
++ * deployment, but not yet size_prices) is upgraded correctly either way.
+  */
+ async function upgradeProductsTableIfNeeded() {
+   const { rows: columns } = await db.execute('PRAGMA table_info(products)');
++  const columnNames = columns.map((c) => c.name);
+ 
+-  if (columns.some((c) => c.name === 'image_data')) {
+-    return; // already up to date
++  if (!columnNames.includes('image_data')) {
++    logger.info('Upgrading products table to add image_data/image_mime columns');
++    await db.execute('ALTER TABLE products ADD COLUMN image_data TEXT;');
++    await db.execute('ALTER TABLE products ADD COLUMN image_mime TEXT;');
++    logger.info('Products table upgraded successfully (image columns)');
+   }
+ 
+-  logger.info('Upgrading products table to add image_data/image_mime columns');
+-  await db.execute('ALTER TABLE products ADD COLUMN image_data TEXT;');
+-  await db.execute('ALTER TABLE products ADD COLUMN image_mime TEXT;');
+-  logger.info('Products table upgraded successfully');
++  if (!columnNames.includes('size_prices')) {
++    logger.info('Upgrading products table to add size_prices column');
++    await db.execute('ALTER TABLE products ADD COLUMN size_prices TEXT;');
++    logger.info('Products table upgraded successfully (size_prices column)');
++  }
+ }
+ 
+ async function main() {
+diff --git a/src/db/repositories/orderRepository.js b/src/db/repositories/orderRepository.js
+index fba3c85..56a2b2f 100644
+--- a/src/db/repositories/orderRepository.js
++++ b/src/db/repositories/orderRepository.js
+@@ -2,6 +2,7 @@
+ 
+ const crypto = require('node:crypto');
+ const db = require('../connection');
++const { DELIVERY_FEE_CENTS } = require('../../config/constants');
+ 
+ function generateOrderNumber() {
+   // Random, non-sequential order numbers so a customer can't enumerate
+@@ -17,7 +18,7 @@ function generateOrderNumber() {
+  */
+ async function createOrder({ userId, customer, paymentMethod, items }) {
+   const subtotalCents = items.reduce((sum, i) => sum + i.unitPriceCents * i.quantity, 0);
+-  const totalCents = subtotalCents; // flat-rate/free shipping in this demo
++  const totalCents = subtotalCents + DELIVERY_FEE_CENTS;
+   const orderNumber = generateOrderNumber();
+ 
+   const tx = await db.transaction('write');
+diff --git a/src/db/repositories/productRepository.js b/src/db/repositories/productRepository.js
+index 6fa389e..dc4d0c6 100644
+--- a/src/db/repositories/productRepository.js
++++ b/src/db/repositories/productRepository.js
+@@ -8,11 +8,28 @@ function parseProduct(row) {
+     ...row,
+     sizes: JSON.parse(row.sizes),
+     colors: JSON.parse(row.colors),
++    sizePrices: row.size_prices ? JSON.parse(row.size_prices) : {},
+     price: row.price_cents / 100,
+     compareAtPrice: row.compare_at_price_cents ? row.compare_at_price_cents / 100 : null,
+   };
+ }
+ 
++/**
++ * Resolves the actual price (in cents) for a specific size of a product
++ * — a bigger sheet costs more than a smaller one, so the base
++ * price_cents is only the fallback for sizes that don't have their own
++ * override in sizePrices. This is the single place that decision is
++ * made; every caller that needs a size-aware price (the product page,
++ * the cart, checkout) goes through this rather than each recomputing
++ * its own fallback logic.
++ */
++function getPriceForSize(product, size) {
++  if (product.sizePrices && Object.prototype.hasOwnProperty.call(product.sizePrices, size)) {
++    return product.sizePrices[size];
++  }
++  return product.price_cents;
++}
++
+ // Escape SQL LIKE wildcard characters in user-supplied search text so a
+ // search for "50%" or "a_b" can't be used to broaden a pattern match
+ // beyond what the user intended (a minor but real injection-adjacent bug
+@@ -144,8 +161,8 @@ async function create(data) {
+   const result = await db.execute({
+     sql: `INSERT INTO products
+             (slug, name, category, description, price_cents, compare_at_price_cents,
+-             image_url, material, care, sizes, colors, in_stock, is_best_seller, is_new)
+-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
++             image_url, material, care, sizes, colors, size_prices, in_stock, is_best_seller, is_new)
++          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     args: [
+       slug,
+       data.name,
+@@ -158,6 +175,7 @@ async function create(data) {
+       data.care,
+       JSON.stringify(data.sizes),
+       JSON.stringify(data.colors),
++      JSON.stringify(data.sizePrices || {}),
+       data.inStock ? 1 : 0,
+       data.isBestSeller ? 1 : 0,
+       data.isNew ? 1 : 0,
+@@ -179,7 +197,7 @@ async function update(id, data) {
+   await db.execute({
+     sql: `UPDATE products SET
+             slug = ?, name = ?, category = ?, description = ?, price_cents = ?,
+-            compare_at_price_cents = ?, material = ?, care = ?, sizes = ?, colors = ?,
++            compare_at_price_cents = ?, material = ?, care = ?, sizes = ?, colors = ?, size_prices = ?,
+             in_stock = ?, is_best_seller = ?, is_new = ?
+           WHERE id = ?`,
+     args: [
+@@ -193,6 +211,7 @@ async function update(id, data) {
+       data.care,
+       JSON.stringify(data.sizes),
+       JSON.stringify(data.colors),
++      JSON.stringify(data.sizePrices || {}),
+       data.inStock ? 1 : 0,
+       data.isBestSeller ? 1 : 0,
+       data.isNew ? 1 : 0,
+@@ -285,4 +304,5 @@ module.exports = {
+   getImageData,
+   remove,
+   countOrderReferences,
++  getPriceForSize,
+ };
+diff --git a/src/db/schema.sql b/src/db/schema.sql
+index 2a814bf..daad1fa 100644
+--- a/src/db/schema.sql
++++ b/src/db/schema.sql
+@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS products (
+   care                  TEXT NOT NULL,
+   sizes                 TEXT NOT NULL,   -- JSON array, e.g. ["140x190","160x200"]
+   colors                TEXT NOT NULL,   -- JSON array, e.g. ["Anthracite","Mauve"]
++  size_prices           TEXT,            -- JSON object, e.g. {"180x200": 12900}. Sizes not
++                                          -- listed here (or when this is NULL entirely) fall
++                                          -- back to price_cents — see productRepository.getPriceForSize.
+   in_stock              INTEGER NOT NULL DEFAULT 1,
+   is_best_seller        INTEGER NOT NULL DEFAULT 0,
+   is_new                INTEGER NOT NULL DEFAULT 0,
+diff --git a/src/routes/admin/products.js b/src/routes/admin/products.js
+index 63bb1a4..54917fc 100644
+--- a/src/routes/admin/products.js
++++ b/src/routes/admin/products.js
+@@ -100,6 +100,9 @@ router.get(
+         care: product.care,
+         sizes: product.sizes.join(', '),
+         colors: product.colors.join(', '),
++        sizePrices: Object.entries(product.sizePrices || {})
++          .map(([size, cents]) => `${size}:${(cents / 100).toFixed(3)}`)
++          .join('\n'),
+         inStock: product.in_stock ? 'on' : '',
+         isBestSeller: product.is_best_seller ? 'on' : '',
+         isNew: product.is_new ? 'on' : '',
+diff --git a/src/routes/cart.js b/src/routes/cart.js
+index 2c1dccb..0cc194d 100644
+--- a/src/routes/cart.js
++++ b/src/routes/cart.js
+@@ -8,6 +8,7 @@ const { setFlash } = require('../utils/flash');
+ const { validateBody } = require('../middleware/validate');
+ const { addToCartSchema, removeCartItemSchema } = require('../schemas/cartSchemas');
+ const asyncHandler = require('../utils/asyncHandler');
++const { DELIVERY_FEE_CENTS } = require('../config/constants');
+ 
+ const router = express.Router();
+ 
+@@ -30,6 +31,7 @@ router.get(
+       title: 'Mon panier — Floridrap Plus',
+       items,
+       subtotalCents,
++      deliveryFeeCents: DELIVERY_FEE_CENTS,
+     });
+   })
+ );
+diff --git a/src/routes/checkout.js b/src/routes/checkout.js
+index febaf10..9885f95 100644
+--- a/src/routes/checkout.js
++++ b/src/routes/checkout.js
+@@ -11,6 +11,7 @@ const { setFlash } = require('../utils/flash');
+ const { sendMail } = require('../utils/mailer');
+ const { orderConfirmationEmail } = require('../utils/emailTemplates');
+ const logger = require('../utils/logger');
++const { DELIVERY_FEE_CENTS } = require('../config/constants');
+ 
+ const router = express.Router();
+ 
+@@ -26,6 +27,7 @@ router.get(
+       title: 'Commande — Floridrap Plus',
+       items,
+       subtotalCents,
++      deliveryFeeCents: DELIVERY_FEE_CENTS,
+       governorates: GOVERNORATES,
+       values: req.user ? { fullName: req.user.name, email: req.user.email } : {},
+       errors: {},
+@@ -50,6 +52,7 @@ router.post(
+         title: 'Commande — Floridrap Plus',
+         items,
+         subtotalCents,
++        deliveryFeeCents: DELIVERY_FEE_CENTS,
+         governorates: GOVERNORATES,
+         values: req.body,
+         errors: req.validationErrors,
+@@ -57,16 +60,18 @@ router.post(
+     }
+ 
+     // Authoritative order data is built entirely from server-side state
+-    // (today's product prices + names from the DB) — the validated form
+-    // fields only carry shipping/contact details, never price. This is
+-    // what prevents a manipulated form field from changing what the
+-    // customer is actually charged.
++    // (today's product prices/size-overrides + names from the DB) — the
++    // validated form fields only carry shipping/contact details, never
++    // price. i.unitPriceCents was already resolved per-size by
++    // cart.hydrate() above (productRepository.getPriceForSize), so this
++    // is what prevents a manipulated form field from changing what the
++    // customer is actually charged, regardless of which size they picked.
+     const orderItems = items.map((i) => ({
+       productId: i.product.id,
+       name: i.product.name,
+       size: i.size,
+       color: i.color,
+-      unitPriceCents: i.product.price_cents,
++      unitPriceCents: i.unitPriceCents,
+       quantity: i.quantity,
+     }));
+ 
+diff --git a/src/routes/product.js b/src/routes/product.js
+index 1ebc562..384700b 100644
+--- a/src/routes/product.js
++++ b/src/routes/product.js
+@@ -37,10 +37,20 @@ router.get(
+     const galleryImages = await productImageRepository.listForProduct(product.id);
+     const images = [{ url: product.image_url }, ...galleryImages];
+ 
++    // One resolved price per size (falls back to the base price for any
++    // size without its own override) — computed here rather than in the
++    // view, keeping productRepository as the single place that decides
++    // "what does size X actually cost".
++    const sizePriceList = product.sizes.map((size) => ({
++      size,
++      priceCents: productRepository.getPriceForSize(product, size),
++    }));
++
+     res.render('product', {
+       title: `${product.name} — Floridrap Plus`,
+       product,
+       images,
++      sizePriceList,
+       related,
+     });
+   })
+diff --git a/src/schemas/adminSchemas.js b/src/schemas/adminSchemas.js
+index 50639b7..2f2de01 100644
+--- a/src/schemas/adminSchemas.js
++++ b/src/schemas/adminSchemas.js
+@@ -38,6 +38,8 @@ const optionalPriceField = z
+   .optional()
+   .transform((val) => (val === '' || val === undefined ? null : val));
+ 
++const priceLinePattern = /^\d{1,6}(\.\d{1,3})?$/;
++
+ const productSchema = z
+   .object({
+     name: z.string().trim().min(2).max(120),
+@@ -49,24 +51,72 @@ const productSchema = z
+     care: z.string().trim().min(2).max(150),
+     sizes: csvListField(12),
+     colors: csvListField(12),
++    // One "taille:prix" pair per line, e.g. "180x200:129.000". Entirely
++    // optional — a blank line, or leaving this whole field empty, means
++    // every size just uses the base `price` above, exactly like before
++    // this feature existed. Parsed and cross-checked against `sizes` in
++    // the transform below, since that's the first point both fields are
++    // available together.
++    sizePrices: z.string().optional().default(''),
+     inStock: z.enum(['on']).optional(),
+     isBestSeller: z.enum(['on']).optional(),
+     isNew: z.enum(['on']).optional(),
+   })
+-  .transform((data) => ({
+-    name: data.name,
+-    category: data.category,
+-    description: data.description,
+-    priceCents: data.price,
+-    compareAtPriceCents: data.compareAtPrice,
+-    material: data.material,
+-    care: data.care,
+-    sizes: data.sizes,
+-    colors: data.colors,
+-    inStock: data.inStock === 'on',
+-    isBestSeller: data.isBestSeller === 'on',
+-    isNew: data.isNew === 'on',
+-  }))
++  .transform((data, ctx) => {
++    const sizePrices = {};
++    const lines = data.sizePrices
++      .split('\n')
++      .map((line) => line.trim())
++      .filter(Boolean);
++
++    for (const line of lines) {
++      const separatorIndex = line.indexOf(':');
++      if (separatorIndex === -1) {
++        ctx.addIssue({
++          code: z.ZodIssueCode.custom,
++          message: `Ligne invalide : "${line}" (format attendu : taille:prix)`,
++          path: ['sizePrices'],
++        });
++        continue;
++      }
++      const rawSize = line.slice(0, separatorIndex).trim();
++      const rawPrice = line.slice(separatorIndex + 1).trim();
++
++      if (!data.sizes.includes(rawSize)) {
++        ctx.addIssue({
++          code: z.ZodIssueCode.custom,
++          message: `"${rawSize}" ne fait pas partie des tailles disponibles ci-dessus`,
++          path: ['sizePrices'],
++        });
++        continue;
++      }
++      if (!priceLinePattern.test(rawPrice)) {
++        ctx.addIssue({
++          code: z.ZodIssueCode.custom,
++          message: `Prix invalide pour "${rawSize}"`,
++          path: ['sizePrices'],
++        });
++        continue;
++      }
++      sizePrices[rawSize] = Math.round(parseFloat(rawPrice) * 100);
++    }
++
++    return {
++      name: data.name,
++      category: data.category,
++      description: data.description,
++      priceCents: data.price,
++      compareAtPriceCents: data.compareAtPrice,
++      material: data.material,
++      care: data.care,
++      sizes: data.sizes,
++      colors: data.colors,
++      sizePrices,
++      inStock: data.inStock === 'on',
++      isBestSeller: data.isBestSeller === 'on',
++      isNew: data.isNew === 'on',
++    };
++  })
+   .refine((data) => !data.compareAtPriceCents || data.compareAtPriceCents > data.priceCents, {
+     message: 'Le prix barré doit être supérieur au prix actuel',
+     path: ['compareAtPrice'],
+diff --git a/src/utils/cart.js b/src/utils/cart.js
+index 76ec333..80e4036 100644
+--- a/src/utils/cart.js
++++ b/src/utils/cart.js
+@@ -66,7 +66,11 @@ async function hydrate(req) {
+       droppedAny = true;
+       continue;
+     }
+-    const lineTotalCents = product.price_cents * line.quantity;
++    // Resolved fresh from the product's current price/size-overrides on
++    // every hydrate — same principle as before (never trust a price
++    // carried over from when the item was added), just size-aware now.
++    const unitPriceCents = productRepository.getPriceForSize(product, line.size);
++    const lineTotalCents = unitPriceCents * line.quantity;
+     subtotalCents += lineTotalCents;
+     items.push({
+       lineId: line.lineId,
+@@ -75,6 +79,7 @@ async function hydrate(req) {
+       color: line.color,
+       quantity: line.quantity,
+       product,
++      unitPriceCents,
+       lineTotalCents,
+     });
+   }
+diff --git a/src/utils/emailTemplates.js b/src/utils/emailTemplates.js
+index fd53196..a7faf34 100644
+--- a/src/utils/emailTemplates.js
++++ b/src/utils/emailTemplates.js
+@@ -73,6 +73,16 @@ function orderConfirmationEmail({ order, items }) {
+     <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
+       ${itemRows}
+     </table>
++    <table style="width:100%; border-collapse: collapse; font-size: 14px;">
++      <tr>
++        <td style="padding: 4px 0; color:#5c5763;">Sous-total</td>
++        <td style="padding: 4px 0; text-align:right;">${(order.subtotal_cents / 100).toFixed(3)} DT</td>
++      </tr>
++      <tr>
++        <td style="padding: 4px 0; color:#5c5763;">Livraison</td>
++        <td style="padding: 4px 0; text-align:right;">+${((order.total_cents - order.subtotal_cents) / 100).toFixed(3)} DT</td>
++      </tr>
++    </table>
+     <p style="font-size: 16px; font-weight: 700; text-align:right;">
+       Total : ${(order.total_cents / 100).toFixed(3)} DT
+     </p>
+@@ -82,7 +92,7 @@ function orderConfirmationEmail({ order, items }) {
+     </p>
+   `);
+ 
+-  const text = `Merci pour votre commande, ${order.full_name} !\nCommande n° ${order.order_number}\nTotal : ${(order.total_cents / 100).toFixed(3)} DT\nLivraison à : ${order.address}, ${order.city}, ${order.governorate}\nPaiement à la livraison.`;
++  const text = `Merci pour votre commande, ${order.full_name} !\nCommande n° ${order.order_number}\nSous-total : ${(order.subtotal_cents / 100).toFixed(3)} DT\nLivraison : +${((order.total_cents - order.subtotal_cents) / 100).toFixed(3)} DT\nTotal : ${(order.total_cents / 100).toFixed(3)} DT\nLivraison à : ${order.address}, ${order.city}, ${order.governorate}\nPaiement à la livraison.`;
+ 
+   return { subject: `Confirmation de commande ${order.order_number} — Floridrap Plus`, html, text };
+ }
+diff --git a/views/admin/order-detail.ejs b/views/admin/order-detail.ejs
+index 7e71b44..c1850e3 100644
+--- a/views/admin/order-detail.ejs
++++ b/views/admin/order-detail.ejs
+@@ -23,6 +23,8 @@
+           </li>
+         <% }); %>
+       </ul>
++      <div class="summary-row"><span>Sous-total</span><span><%= (order.subtotal_cents / 100).toFixed(3) %> DT</span></div>
++      <div class="summary-row"><span>Livraison</span><span>+<%= ((order.total_cents - order.subtotal_cents) / 100).toFixed(3) %> DT</span></div>
+       <div class="summary-row total"><span>Total</span><span><%= (order.total_cents / 100).toFixed(3) %> DT</span></div>
+ 
+       <h2 style="font-size:15px; margin: 28px 0 10px;">Livraison</h2>
+diff --git a/views/admin/product-form.ejs b/views/admin/product-form.ejs
+index 264f82b..ea58c08 100644
+--- a/views/admin/product-form.ejs
++++ b/views/admin/product-form.ejs
+@@ -89,6 +89,14 @@
+         </div>
+       </div>
+ 
++      <div class="field <%= errors.sizePrices ? 'has-error' : '' %>">
++        <label for="sizePrices">Prix par taille (optionnel)</label>
++        <textarea id="sizePrices" name="sizePrices" rows="3" placeholder="180x200:129.000&#10;220x240:159.000"
++                  <% if (errors.sizePrices) { %>aria-invalid="true" aria-describedby="sizePrices-error"<% } %>><%= values.sizePrices || '' %></textarea>
++        <p class="hint">Une taille par ligne, au format <code>taille:prix</code> (ex. <code>180x200:129.000</code>). Les tailles non listées ici utilisent le prix de base ci-dessus — laissez vide si toutes les tailles ont le même prix.</p>
++        <% if (errors.sizePrices) { %><p class="error-text" id="sizePrices-error"><%= errors.sizePrices[0] %></p><% } %>
++      </div>
++
+       <div class="field">
+         <label class="checkbox-row">
+           <input type="checkbox" name="inStock" <%= values.inStock === 'on' ? 'checked' : '' %>> En stock
+diff --git a/views/cart.ejs b/views/cart.ejs
+index 0e7d1c0..16495f9 100644
+--- a/views/cart.ejs
++++ b/views/cart.ejs
+@@ -33,7 +33,7 @@
+                     </div>
+                   </div>
+                 </td>
+-                <td><%= item.product.price.toFixed(3) %> DT</td>
++                <td><%= (item.unitPriceCents / 100).toFixed(3) %> DT</td>
+                 <td>
+                   <label for="qty-<%= i %>" class="visually-hidden">Quantité pour <%= item.product.name %></label>
+                   <input type="hidden" name="items[<%= i %>][lineId]" value="<%= item.lineId %>">
+@@ -65,8 +65,8 @@
+       <aside class="summary-box" aria-label="Résumé de la commande">
+         <h2>Résumé de la commande</h2>
+         <div class="summary-row"><span>Sous-total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
+-        <div class="summary-row"><span>Livraison</span><span>Calculée à la commande</span></div>
+-        <div class="summary-row total"><span>Total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
++        <div class="summary-row"><span>Livraison</span><span>+<%= (deliveryFeeCents / 100).toFixed(3) %> DT</span></div>
++        <div class="summary-row total"><span>Total</span><span><%= ((subtotalCents + deliveryFeeCents) / 100).toFixed(3) %> DT</span></div>
+         <a href="/checkout" class="btn btn-block btn-lg" style="margin-top:16px;">Passer la commande</a>
+       </aside>
+     </div>
+diff --git a/views/checkout-confirmation.ejs b/views/checkout-confirmation.ejs
+index b5f6b12..7867de2 100644
+--- a/views/checkout-confirmation.ejs
++++ b/views/checkout-confirmation.ejs
+@@ -22,6 +22,8 @@
+         </li>
+       <% }); %>
+     </ul>
++    <div class="summary-row" style="text-align:left;"><span>Sous-total</span><span><%= (order.subtotal_cents / 100).toFixed(3) %> DT</span></div>
++    <div class="summary-row" style="text-align:left;"><span>Livraison</span><span>+<%= ((order.total_cents - order.subtotal_cents) / 100).toFixed(3) %> DT</span></div>
+     <div class="summary-row total" style="text-align:left;"><span>Total</span><span><%= (order.total_cents / 100).toFixed(3) %> DT</span></div>
+ 
+     <a href="/shop" class="btn btn-lg" style="margin-top:28px;">Continuer mes achats</a>
+diff --git a/views/checkout.ejs b/views/checkout.ejs
+index 8c942ef..a698fbb 100644
+--- a/views/checkout.ejs
++++ b/views/checkout.ejs
+@@ -84,7 +84,9 @@
+           </li>
+         <% }); %>
+       </ul>
+-      <div class="summary-row total"><span>Total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
++      <div class="summary-row"><span>Sous-total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
++      <div class="summary-row"><span>Livraison</span><span>+<%= (deliveryFeeCents / 100).toFixed(3) %> DT</span></div>
++      <div class="summary-row total"><span>Total</span><span><%= ((subtotalCents + deliveryFeeCents) / 100).toFixed(3) %> DT</span></div>
+     </aside>
+   </div>
+ </main>
+diff --git a/views/product.ejs b/views/product.ejs
+index de64f23..6911f46 100644
+--- a/views/product.ejs
++++ b/views/product.ejs
+@@ -47,11 +47,13 @@
+       </div>
+     </div>
+ 
+-    <div>
++    <div class="product-info-col">
+       <p class="pd-cat"><%= product.category %></p>
+       <h1 class="pd-title"><%= product.name %></h1>
+       <div class="pd-price-row">
+-        <span class="pd-price"><%= product.price.toFixed(3) %> DT</span>
++        <% sizePriceList.forEach(function(sp, i) { %>
++          <span class="pd-price price-for-size-<%= i %>"><%= (sp.priceCents / 100).toFixed(3) %> DT</span>
++        <% }); %>
+         <% if (product.compareAtPrice) { %><span class="pd-price-old"><%= product.compareAtPrice.toFixed(3) %> DT</span><% } %>
+       </div>
+       <p class="pd-desc"><%= product.description %></p>

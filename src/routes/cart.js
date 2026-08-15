@@ -8,6 +8,7 @@ const { setFlash } = require('../utils/flash');
 const { validateBody } = require('../middleware/validate');
 const { addToCartSchema, removeCartItemSchema } = require('../schemas/cartSchemas');
 const asyncHandler = require('../utils/asyncHandler');
+const { DELIVERY_FEE_CENTS } = require('../config/constants');
 
 const router = express.Router();
 
@@ -30,6 +31,7 @@ router.get(
       title: 'Mon panier — Floridrap Plus',
       items,
       subtotalCents,
+      deliveryFeeCents: DELIVERY_FEE_CENTS,
     });
   })
 );

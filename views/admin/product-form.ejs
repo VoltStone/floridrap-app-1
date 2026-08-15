@@ -89,6 +89,14 @@
         </div>
       </div>
 
+      <div class="field <%= errors.sizePrices ? 'has-error' : '' %>">
+        <label for="sizePrices">Prix par taille (optionnel)</label>
+        <textarea id="sizePrices" name="sizePrices" rows="3" placeholder="180x200:129.000&#10;220x240:159.000"
+                  <% if (errors.sizePrices) { %>aria-invalid="true" aria-describedby="sizePrices-error"<% } %>><%= values.sizePrices || '' %></textarea>
+        <p class="hint">Une taille par ligne, au format <code>taille:prix</code> (ex. <code>180x200:129.000</code>). Les tailles non listées ici utilisent le prix de base ci-dessus — laissez vide si toutes les tailles ont le même prix.</p>
+        <% if (errors.sizePrices) { %><p class="error-text" id="sizePrices-error"><%= errors.sizePrices[0] %></p><% } %>
+      </div>
+
       <div class="field">
         <label class="checkbox-row">
           <input type="checkbox" name="inStock" <%= values.inStock === 'on' ? 'checked' : '' %>> En stock

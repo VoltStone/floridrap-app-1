@@ -401,6 +401,26 @@ legend { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; col
 .pd-title { font-size: 32px; margin: 8px 0 14px; line-height: 1.2; }
 .pd-price-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
 .pd-price { font-size: 27px; font-weight: 700; background: var(--grad-btn); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* Per-size pricing: one price span per size is rendered (see product.ejs),
+   all hidden by default, and :has() reveals only the one matching
+   whichever size radio is currently checked anywhere in the info column
+   — this works regardless of DOM order between the price row and the
+   size selector below it, unlike a plain ~ sibling selector. Capped at
+   12 to match the admin form's maximum size count (csvListField(12)). */
+.product-info-col .pd-price { display: none; }
+.product-info-col:has(#size-0:checked) .price-for-size-0,
+.product-info-col:has(#size-1:checked) .price-for-size-1,
+.product-info-col:has(#size-2:checked) .price-for-size-2,
+.product-info-col:has(#size-3:checked) .price-for-size-3,
+.product-info-col:has(#size-4:checked) .price-for-size-4,
+.product-info-col:has(#size-5:checked) .price-for-size-5,
+.product-info-col:has(#size-6:checked) .price-for-size-6,
+.product-info-col:has(#size-7:checked) .price-for-size-7,
+.product-info-col:has(#size-8:checked) .price-for-size-8,
+.product-info-col:has(#size-9:checked) .price-for-size-9,
+.product-info-col:has(#size-10:checked) .price-for-size-10,
+.product-info-col:has(#size-11:checked) .price-for-size-11 { display: inline; }
 .pd-price-old { font-size: 15px; color: var(--color-7); text-decoration: line-through; }
 .pd-desc { color: var(--color-7); font-size: 15px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--color-3); }
 .opt-block { margin-bottom: 22px; }

@@ -33,7 +33,7 @@
                     </div>
                   </div>
                 </td>
-                <td><%= item.product.price.toFixed(3) %> DT</td>
+                <td><%= (item.unitPriceCents / 100).toFixed(3) %> DT</td>
                 <td>
                   <label for="qty-<%= i %>" class="visually-hidden">Quantité pour <%= item.product.name %></label>
                   <input type="hidden" name="items[<%= i %>][lineId]" value="<%= item.lineId %>">
@@ -65,8 +65,8 @@
       <aside class="summary-box" aria-label="Résumé de la commande">
         <h2>Résumé de la commande</h2>
         <div class="summary-row"><span>Sous-total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
-        <div class="summary-row"><span>Livraison</span><span>Calculée à la commande</span></div>
-        <div class="summary-row total"><span>Total</span><span><%= (subtotalCents / 100).toFixed(3) %> DT</span></div>
+        <div class="summary-row"><span>Livraison</span><span>+<%= (deliveryFeeCents / 100).toFixed(3) %> DT</span></div>
+        <div class="summary-row total"><span>Total</span><span><%= ((subtotalCents + deliveryFeeCents) / 100).toFixed(3) %> DT</span></div>
         <a href="/checkout" class="btn btn-block btn-lg" style="margin-top:16px;">Passer la commande</a>
       </aside>
     </div>

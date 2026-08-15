@@ -8,9 +8,26 @@ function parseProduct(row) {
     ...row,
     sizes: JSON.parse(row.sizes),
     colors: JSON.parse(row.colors),
+    sizePrices: row.size_prices ? JSON.parse(row.size_prices) : {},
     price: row.price_cents / 100,
     compareAtPrice: row.compare_at_price_cents ? row.compare_at_price_cents / 100 : null,
   };
+}
+
+/**
+ * Resolves the actual price (in cents) for a specific size of a product
+ * — a bigger sheet costs more than a smaller one, so the base
+ * price_cents is only the fallback for sizes that don't have their own
+ * override in sizePrices. This is the single place that decision is
+ * made; every caller that needs a size-aware price (the product page,
+ * the cart, checkout) goes through this rather than each recomputing
+ * its own fallback logic.
+ */
+function getPriceForSize(product, size) {
+  if (product.sizePrices && Object.prototype.hasOwnProperty.call(product.sizePrices, size)) {
+    return product.sizePrices[size];
+  }
+  return product.price_cents;
 }
 
 // Escape SQL LIKE wildcard characters in user-supplied search text so a
@@ -144,8 +161,8 @@ async function create(data) {
   const result = await db.execute({
     sql: `INSERT INTO products
             (slug, name, category, description, price_cents, compare_at_price_cents,
-             image_url, material, care, sizes, colors, in_stock, is_best_seller, is_new)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             image_url, material, care, sizes, colors, size_prices, in_stock, is_best_seller, is_new)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       slug,
       data.name,
@@ -158,6 +175,7 @@ async function create(data) {
       data.care,
       JSON.stringify(data.sizes),
       JSON.stringify(data.colors),
+      JSON.stringify(data.sizePrices || {}),
       data.inStock ? 1 : 0,
       data.isBestSeller ? 1 : 0,
       data.isNew ? 1 : 0,
@@ -179,7 +197,7 @@ async function update(id, data) {
   await db.execute({
     sql: `UPDATE products SET
             slug = ?, name = ?, category = ?, description = ?, price_cents = ?,
-            compare_at_price_cents = ?, material = ?, care = ?, sizes = ?, colors = ?,
+            compare_at_price_cents = ?, material = ?, care = ?, sizes = ?, colors = ?, size_prices = ?,
             in_stock = ?, is_best_seller = ?, is_new = ?
           WHERE id = ?`,
     args: [
@@ -193,6 +211,7 @@ async function update(id, data) {
       data.care,
       JSON.stringify(data.sizes),
       JSON.stringify(data.colors),
+      JSON.stringify(data.sizePrices || {}),
       data.inStock ? 1 : 0,
       data.isBestSeller ? 1 : 0,
       data.isNew ? 1 : 0,
@@ -285,4 +304,5 @@ module.exports = {
   getImageData,
   remove,
   countOrderReferences,
+  getPriceForSize,
 };

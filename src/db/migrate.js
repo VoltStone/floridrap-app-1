@@ -114,19 +114,28 @@ async function upgradeUsersTableIfNeeded() {
 /**
  * Adds the two columns that let an uploaded product photo be stored in
  * the database itself (see schema.sql for why) rather than on local
- * disk, for a products table that predates this change.
+ * disk, plus (added later) the per-size price override column — for a
+ * products table that predates either change. Both are simple nullable
+ * ADD COLUMNs, checked and applied independently so a database missing
+ * only one of them (e.g. already has image_data from an earlier
+ * deployment, but not yet size_prices) is upgraded correctly either way.
  */
 async function upgradeProductsTableIfNeeded() {
   const { rows: columns } = await db.execute('PRAGMA table_info(products)');
+  const columnNames = columns.map((c) => c.name);
 
-  if (columns.some((c) => c.name === 'image_data')) {
-    return; // already up to date
+  if (!columnNames.includes('image_data')) {
+    logger.info('Upgrading products table to add image_data/image_mime columns');
+    await db.execute('ALTER TABLE products ADD COLUMN image_data TEXT;');
+    await db.execute('ALTER TABLE products ADD COLUMN image_mime TEXT;');
+    logger.info('Products table upgraded successfully (image columns)');
   }
 
-  logger.info('Upgrading products table to add image_data/image_mime columns');
-  await db.execute('ALTER TABLE products ADD COLUMN image_data TEXT;');
-  await db.execute('ALTER TABLE products ADD COLUMN image_mime TEXT;');
-  logger.info('Products table upgraded successfully');
+  if (!columnNames.includes('size_prices')) {
+    logger.info('Upgrading products table to add size_prices column');
+    await db.execute('ALTER TABLE products ADD COLUMN size_prices TEXT;');
+    logger.info('Products table upgraded successfully (size_prices column)');
+  }
 }
 
 async function main() {

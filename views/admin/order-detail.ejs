@@ -23,6 +23,8 @@
           </li>
         <% }); %>
       </ul>
+      <div class="summary-row"><span>Sous-total</span><span><%= (order.subtotal_cents / 100).toFixed(3) %> DT</span></div>
+      <div class="summary-row"><span>Livraison</span><span>+<%= ((order.total_cents - order.subtotal_cents) / 100).toFixed(3) %> DT</span></div>
       <div class="summary-row total"><span>Total</span><span><%= (order.total_cents / 100).toFixed(3) %> DT</span></div>
 
       <h2 style="font-size:15px; margin: 28px 0 10px;">Livraison</h2>
